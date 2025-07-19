@@ -4,3 +4,4 @@ pandas
 dotenv
 google.genai
 pinecone
+scikit-learn
