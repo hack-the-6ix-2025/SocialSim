@@ -113,8 +113,8 @@ class Summarizer:
 
     def authenticate_drive(self):
         creds = None
-        SCOPES = [os.environ.get("GOOGLE_CLOUD_AUTH_URL")]
-        # Token stores the user's access and refresh tokens
+        # Use the correct Google Drive API scope for reading files
+        SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
         if os.path.exists('token.pickle'):
             with open('token.pickle', 'rb') as token:
                 creds = pickle.load(token)
@@ -128,16 +128,19 @@ class Summarizer:
                 pickle.dump(creds, token)
         return build('drive', 'v3', credentials=creds)
 
-    def upload_to_drive(self, file_path):
+    def list_drive_videos(self, folder_id):
+        """
+        List public video files in a Google Drive folder and return their direct download URLs.
+        """
         drive_service = self.authenticate_drive()
-        file_metadata = {'name': os.path.basename(file_path)}
-        media = MediaFileUpload(file_path, resumable=True)
-        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        file_id = file.get('id')
-        # Make file public
-        drive_service.permissions().create(fileId=file_id, body={'role': 'reader', 'type': 'anyone'}).execute()
-        public_url = f"https://drive.google.com/uc?export=download&id={file_id}"
-        return public_url
+        query = f"'{folder_id}' in parents and mimeType contains 'video/' and trashed = false"
+        results = drive_service.files().list(q=query, fields="files(id, name)").execute()
+        files = results.get('files', [])
+        video_urls = []
+        for f in files:
+            public_url = f"https://drive.google.com/uc?export=download&id={f['id']}"
+            video_urls.append(public_url)
+        return video_urls
 
 if __name__ == "__main__":    
     summarizer = Summarizer()

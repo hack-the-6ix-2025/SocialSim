@@ -1,6 +1,7 @@
 import pandas as pd
 import os
-DATASETS_PATH = os.path.join(os.path.dirname(__file__), "datasets")
+DATASETS_PATH = os.path.join(os.path.dirname(__file__), "..", "datasets")
+from Summarizer import Summarizer
 
 def load_video_metadata(filepath):
     """
@@ -48,3 +49,22 @@ if __name__ == "__main__":
                     all_videos_metadata = concat_tables(all_videos_metadata, metadata_df)
         assert len(all_videos_metadata) == sum(num_videos), "Concatenated DataFrame length does not match the sum of individual DataFrames."
         all_videos_metadata.to_csv(resulting_file_path, index=False)
+    all_videos_metadata = load_video_metadata(resulting_file_path)
+
+    # Get video URLs as a list
+    video_urls:list = all_videos_metadata["video_url"].tolist()
+    print(f"Loaded {len(video_urls)} video URLs from {resulting_file_path}")
+
+    # Initialize Summarizer from TwelveLabs
+    summarizer = Summarizer()
+    index_name = "videos_index"
+    print(f"Listing indexes: {summarizer.list_indexes()}")
+    # Authenticare with Google Drive
+    drive_service = summarizer.authenticate_drive()
+    print("Google Drive authenticated successfully.")
+    # Upload the metadata file to Google Drive
+    video_urls = summarizer.list_drive_videos(
+        os.environ.get("GOOGLE_DRIVE_FOLDER_ID")
+    )
+    print(f"Found {len(video_urls)} videos in Google Drive folder.")
+    print(f"Video URLs: {video_urls[:5]}...")
