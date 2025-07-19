@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from utils.supabase_client import supabase
 from typing import List, Literal
 from uuid import UUID
@@ -16,7 +16,6 @@ class SessionCreate(BaseModel):
     associated_simulation: int
 
 # Create individual session
-
 
 # Host session
 
@@ -43,6 +42,70 @@ def add_session_to_database(session: SessionCreate):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# Fetch session history list_user_sessions
+# Fetch all session history
+@router.get("/history/")
+def fetch_history():
+    response = (
+        supabase.table("sessions")
+        .select("*")
+        .execute()
+    )
+    if not response.data:
+        return []
+    return response.data
 
 # Session details 
+@router.get("/{sim_id}")
+def get_simulation(session_id : int):
+    try:
+        response = (
+            supabase.table("sessions")
+            .select("*")
+            .eq("session_id", session_id)  
+            .single()
+            .execute()
+        )
+        if not response.data:
+            return []
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+# Filter sessions by category 
+@router.get("/category/")
+def filter_sessions_by_category(categories: list[str] = Query(...)):
+    try:
+        # Get category_ids for the given category names
+        category_ids_resp = (
+            supabase.table("categories")
+            .select("category_id")
+            .in_("name", categories)
+            .execute()
+        )
+        category_ids = [c["category_id"] for c in category_ids_resp.data]
+
+        if not category_ids:
+            return []
+
+        # Get session_ids from session_categories for those category_ids
+        session_ids_resp = (
+            supabase.table("session_categories")
+            .select("session_id")
+            .in_("category_id", category_ids)
+            .execute()
+        )
+        session_ids = list({s["session_id"] for s in session_ids_resp.data})
+
+        if not session_ids:
+            return []
+
+        # Get sessions with those session_ids
+        sessions_resp = (
+            supabase.table("sessions")
+            .select("*")
+            .in_("session_id", session_ids)
+            .execute()
+        )
+        return sessions_resp.data or []
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
