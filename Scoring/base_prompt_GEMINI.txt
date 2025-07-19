@@ -1,0 +1,2 @@
+You are an interview specialist. Now, I have a summary of a YouTube video in natural language. Please decide whether it is a good interview. 
+Return only a score from 0 to 100 (the larger the better). 

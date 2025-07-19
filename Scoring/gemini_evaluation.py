@@ -52,6 +52,7 @@ class GeminiEvaluator:
         return response
 
 if __name__ == "__main__":
+    # Example usage
     evaluator = GeminiEvaluator()
     test_prompt = ""
     with open(os.path.join(os.path.dirname(__file__), "sample_summary.txt"), "r") as f:

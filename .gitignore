@@ -4,3 +4,4 @@
 *.zip
 *.env
 !**/requirements.txt
+!base_prompt_GEMINI.txt
