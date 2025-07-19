@@ -2,10 +2,12 @@
 export default function HelpPage() {
 	return (
 		<div className="p-8">
-			<h1 className="text-2xl font-bold mb-4">Get Help</h1>
-			<p>support</p>
-
-			<p>useless placeholder page</p>
+			<div className="mb-8">
+				<h1 className="text-3xl font-bold mb-2">Get Help</h1>
+				<p className="text-muted-foreground">
+					Find support, tutorials, and resources to help you get the most out of your simulation experience.
+				</p>
+			</div>
 		</div>
 	)
 }

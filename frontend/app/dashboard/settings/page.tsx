@@ -19,8 +19,12 @@ export default function SettingsPage() {
 
 	return (
 		<div className="p-8">
-			<h1 className="text-2xl font-bold mb-4">Settings</h1>
-			<p>See your past simulations, scores, and links to detailed analytics.</p>
+			<div className="mb-8">
+				<h1 className="text-3xl font-bold mb-2">Settings</h1>
+				<p className="text-muted-foreground">
+					Manage your account preferences, notification settings, and application configuration.
+				</p>
+			</div>
 			<h1>{JSON.stringify(userInfo)}</h1>
 		</div>
 	)

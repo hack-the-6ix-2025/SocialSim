@@ -144,14 +144,12 @@ export default function ProfilePage() {
 		)
 
 	return (
-		<div className="px-8 py-8 max-w-4xl mx-auto">
-			<div className="mb-12 flex justify-between items-start">
-				<div>
-					<h1 className="text-3xl font-bold text-gray-900 mb-2">Profile</h1>
-					<p className="text-gray-600">
-						Manage your account settings and preferences
-					</p>
-				</div>
+		<div className="p-8 mx-auto flex flex-col pb-16">
+			<div className="mb-8">
+				<h1 className="text-3xl font-bold mb-2">Profile</h1>
+				<p className="text-muted-foreground">
+					Manage your account settings, preferences, and professional information.
+				</p>
 			</div>
 
 			<div className="flex items-center gap-6 mb-8">
