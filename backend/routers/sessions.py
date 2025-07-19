@@ -44,7 +44,7 @@ def add_session_to_database(session: SessionCreate):
 
 # Fetch all session history
 @router.get("/history/")
-def fetch_history():
+def get_all_previous_sessions():
     response = (
         supabase.table("sessions")
         .select("*")
