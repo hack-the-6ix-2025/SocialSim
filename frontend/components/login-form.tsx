@@ -16,19 +16,23 @@ export function LoginForm({
 	const [loading, setLoading] = useState(false)
 
 	async function handleSignIn() {
-		if (loading) return // Prevent multiple requests
-		setLoading(true)
 		try {
+			// const redirectInfo = {
+			// 	firstTime: "/onboarding",
+			// 	redirectTo: "/dashboard/discover"
+			// }
+
 			const { url } = await signInWithGoogle("/dashboard/discover")
+			
+			// redirect to the OAuth URL
 			if (url) {
 				window.location.href = url
 			}
-		} catch {
-			// Optionally handle error (e.g., show a toast)
-		} finally {
-			setLoading(false)
+		} catch (error) {
+			console.error("Sign in error:", error)
 		}
 	}
+
 	return (
 		<div className={cn("flex flex-col gap-6", className)} {...props}>
 			<Card className="overflow-hidden p-0">
@@ -110,10 +114,6 @@ export function LoginForm({
 					</div>
 				</CardContent>
 			</Card>
-			<div className="text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4">
-				By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-				and <a href="#">Privacy Policy</a>.
-			</div>
 		</div>
 	)
 }

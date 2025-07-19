@@ -2,6 +2,11 @@
 
 import { createClient } from "@/utils/supabase/server"
 
+// interface RedirectInfo {
+// 	firstTime: string
+// 	redirectTo: string
+// }
+
 export async function signInWithGoogle(redirectTo: string) {
 	const supabase = await createClient()
 	const redirectUrl = `http://localhost:3000/auth/callback?next=${redirectTo}`
