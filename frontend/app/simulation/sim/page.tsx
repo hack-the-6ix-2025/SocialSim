@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaStop, FaRedo, FaUserCircle } from 'react-icons/fa';
 
 export default function SimulationPage() {
-  const router = useRouter();
 
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
@@ -151,7 +149,6 @@ export default function SimulationPage() {
           <button
             className="p-3 rounded-full bg-red-100 hover:bg-red-200"
             aria-label="Stop"
-            onClick={() => router.replace('/simulation/summary')}
           >
             <FaStop className="text-xl text-red-600" />
           </button>
