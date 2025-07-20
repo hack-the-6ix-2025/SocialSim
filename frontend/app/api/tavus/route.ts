@@ -4,7 +4,7 @@ const TAVUS_API_KEY = process.env.TAVUS_API_KEY
 
 export async function POST(request: NextRequest) {
   try {
-    const { action, personaId } = await request.json()
+    const { action, personaId, simulation } = await request.json()
 
     console.log("Action:", action, "PersonaId:", personaId)
 
@@ -18,14 +18,25 @@ export async function POST(request: NextRequest) {
 
     if (action === 'createPersona') {
       console.log("Making request to Tavus API with key:", TAVUS_API_KEY ? "Key exists" : "No key")
+      console.log("Simulation data:", simulation)
+      
+      // Use simulation data if available, otherwise use default
+      const personaName = simulation?.name || "Professional Simulation Practice Assistant"
+
+      console.log("Simulation name:", simulation?.name)
+      const systemPrompt = simulation?.system_prompt || 
+        "You will help the user practice their communication skills and go along with what they are saying. If they do not begin with talking, start a conversation based on the context of the simulation."
+      
+      // medical related simulation context
+      console.log("Simulation description:", simulation?.description)
+      const context = simulation?.description || 
+      "You are pretending to be a client seeing a medical professional, to help them practice their communication skills. You will ask questions and go along with what they are saying. You can create a medical situation if needed."
       
       const requestBody = {
-        persona_name: "Interviewer",
-        system_prompt:
-          "As an Interviewer, you are a skilled professional who conducts thoughtful and structured interviews. Your aim is to ask insightful questions, listen carefully, and assess responses objectively to identify the best candidates.",
+        persona_name: personaName,
+        system_prompt: systemPrompt,
         pipeline_mode: "full",
-        context:
-          "You have a track record of conducting interviews that put candidates at ease, draw out their strengths, and help organizations make excellent hiring decisions.",
+        context: context,
         default_replica_id: "rfe12d8b9597",
         layers: {
           perception: {
@@ -78,7 +89,7 @@ export async function POST(request: NextRequest) {
 
       const requestBody = {
         persona_id: personaId,
-        conversation_name: "Interview User",
+        conversation_name: simulation?.name ? `${simulation.name} Simulation` : "Professional Practice Session",
       }
       
       console.log("Creating conversation with body:", JSON.stringify(requestBody, null, 2))

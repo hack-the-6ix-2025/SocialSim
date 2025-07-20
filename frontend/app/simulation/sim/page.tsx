@@ -6,11 +6,21 @@ import { Conversation } from "../../../components/cvi/components/conversation"
 import { useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { ArrowRight, ArrowLeft } from "lucide-react"
+import { createClient } from "@/utils/supabase/client"
+
+interface Simulation {
+  sim_id: string
+  name: string
+  description: string
+  system_prompt: string
+  category: string
+}
 
 export default function SimulationPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const conversationUrlFromParams = searchParams.get("conversationUrl")
+  const simIdFromParams = searchParams.get("simId")
 
   /* 
       1. User clicks "Start conversation"
@@ -37,6 +47,36 @@ export default function SimulationPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [status, setStatus] = useState("")
   const [showControls, setShowControls] = useState(true)
+  const [simulation, setSimulation] = useState<Simulation | null>(null)
+  const [isLoadingSimulation, setIsLoadingSimulation] = useState(false)
+
+  // Fetch simulation data if simId is provided
+  const fetchSimulation = async (simId: string) => {
+    try {
+      setIsLoadingSimulation(true)
+      const supabase = createClient()
+      
+      const { data, error } = await supabase
+        .from('simulations')
+        .select('sim_id, name, description, system_prompt, category')
+        .eq('sim_id', simId)
+        .single()
+      
+      if (error || !data) {
+        console.error('Error fetching simulation:', error)
+        setStatus('Error: Could not load simulation data')
+        return
+      }
+      
+      setSimulation(data)
+      setStatus('Simulation loaded successfully')
+    } catch (error) {
+      console.error('Error fetching simulation:', error)
+      setStatus('Error: Could not load simulation data')
+    } finally {
+      setIsLoadingSimulation(false)
+    }
+  }
 
   // Check if conversation URL was passed via URL params
   useEffect(() => {
@@ -47,7 +87,14 @@ export default function SimulationPage() {
     }
   }, [conversationUrlFromParams])
 
-  const createPersona = async () => {
+  // Fetch simulation data if simId is provided
+  useEffect(() => {
+    if (simIdFromParams) {
+      fetchSimulation(simIdFromParams)
+    }
+  }, [simIdFromParams])
+
+  const createPersona = async (simulationData?: Simulation) => {
     try {
       console.log("Creating persona...")
       const response = await fetch("/api/tavus", {
@@ -57,6 +104,7 @@ export default function SimulationPage() {
         },
         body: JSON.stringify({
           action: "createPersona",
+          simulation: simulationData,
         }),
       })
 
@@ -117,7 +165,7 @@ export default function SimulationPage() {
       setStatus("Creating persona...")
       console.log("Starting conversation flow...")
 
-      const personaData = await createPersona()
+      const personaData = await createPersona(simulation || undefined)
       console.log("Persona data received:", personaData)
 
       if (personaData && personaData.persona_id) {
@@ -178,10 +226,10 @@ export default function SimulationPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900">
-                    AI Conversation Simulation
+                    {simulation ? simulation.name : 'AI Conversation Simulation'}
                   </h1>
                   <p className="text-gray-600 mt-1">
-                    Practice your communication skills with an AI replica
+                    {simulation ? simulation.description : 'Practice your communication skills with an AI replica'}
                   </p>
                 </div>
                 {conversationUrl && (
@@ -228,9 +276,22 @@ export default function SimulationPage() {
                         You can now review your session and see your performance summary.
                       </p>
                     </div>
-                  ) : (
-                    // Initial state
-                    <div className="mb-6">
+                                      ) : isLoadingSimulation ? (
+                      // Loading simulation state
+                      <div className="mb-6">
+                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                        <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                          Loading Simulation...
+                        </h2>
+                        <p className="text-gray-600 leading-relaxed">
+                          Please wait while we load your simulation data.
+                        </p>
+                      </div>
+                    ) : (
+                      // Initial state
+                      <div className="mb-6">
                       <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg
                           className="w-8 h-8 text-blue-600"
@@ -250,11 +311,10 @@ export default function SimulationPage() {
                         Ready to Start Your Conversation?
                       </h2>
                       <p className="text-gray-600 leading-relaxed">
-                        Begin an interactive conversation with our AI replica.
-                        This simulation will help you practice your communication
-                        skills in a safe, controlled environment. The AI will
-                        respond naturally to your questions and engage in
-                        meaningful dialogue.
+                        {simulation 
+                          ? `Begin an interactive conversation with our AI replica for the "${simulation.name}" simulation. This scenario will help you practice your communication skills in a safe, controlled environment. The AI will respond naturally to your questions and engage in meaningful dialogue based on the ${simulation.category} scenario.`
+                          : `Begin an interactive conversation with our AI replica. This simulation will help you practice your communication skills in a safe, controlled environment. The AI will respond naturally to your questions and engage in meaningful dialogue.`
+                        }
                       </p>
                     </div>
                   )}
@@ -274,7 +334,7 @@ export default function SimulationPage() {
                     ) : (
                       <Button
                         onClick={handleStartConversation}
-                        disabled={isLoading}
+                        disabled={isLoading || isLoadingSimulation}
                         size="lg"
                         className="w-full sm:w-auto px-8 py-3 text-lg font-medium"
                       >
@@ -285,7 +345,7 @@ export default function SimulationPage() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            Start Conversation
+                            {simulation ? `Start ${simulation.name} Simulation` : 'Start Conversation'}
                             <ArrowRight className="w-5 h-5" />
                           </div>
                         )}
@@ -315,7 +375,7 @@ export default function SimulationPage() {
                     Live Conversation
                   </h3>
                   <p className="text-sm text-gray-600">
-                    You're now in an active conversation with the AI replica
+                    You&apos;re now in an active conversation with the AI replica
                   </p>
                 </div>
                 <div className="h-[700px]">
