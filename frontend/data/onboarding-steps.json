@@ -1,0 +1,250 @@
+{
+  "steps": [
+    {
+      "id": "role",
+      "title": "What brings you here?",
+      "description": "Tell us about your role in healthcare",
+      "type": "single-select",
+      "options": [
+        {
+          "value": "student",
+          "label": "Student",
+          "icon": "IconStethoscope",
+          "color": "bg-blue-500"
+        },
+        {
+          "value": "resident",
+          "label": "Resident",
+          "icon": "IconStethoscope",
+          "color": "bg-green-500"
+        },
+        {
+          "value": "nurse",
+          "label": "Nurse",
+          "icon": "IconHeart",
+          "color": "bg-red-500"
+        },
+        {
+          "value": "physician",
+          "label": "Physician",
+          "icon": "IconUser",
+          "color": "bg-purple-500"
+        },
+        {
+          "value": "pharmacist",
+          "label": "Pharmacist",
+          "icon": "IconPill",
+          "color": "bg-orange-500"
+        },
+        {
+          "value": "other",
+          "label": "Other Healthcare Professional",
+          "icon": "IconUsers",
+          "color": "bg-gray-500"
+        }
+      ]
+    },
+    {
+      "id": "field",
+      "title": "What's your specialty?",
+      "description": "Select your primary field of interest",
+      "type": "single-select",
+      "options": [
+        {
+          "value": "emergency",
+          "label": "Emergency Medicine",
+          "icon": "IconHeart",
+          "color": "bg-red-600"
+        },
+        {
+          "value": "cardiology",
+          "label": "Cardiology",
+          "icon": "IconHeart",
+          "color": "bg-red-500"
+        },
+        {
+          "value": "neurology",
+          "label": "Neurology",
+          "icon": "IconBrain",
+          "color": "bg-purple-600"
+        },
+        {
+          "value": "pediatrics",
+          "label": "Pediatrics",
+          "icon": "IconUsers",
+          "color": "bg-pink-500"
+        },
+        {
+          "value": "surgery",
+          "label": "Surgery",
+          "icon": "IconStethoscope",
+          "color": "bg-blue-600"
+        },
+        {
+          "value": "psychiatry",
+          "label": "Psychiatry",
+          "icon": "IconBrain",
+          "color": "bg-indigo-500"
+        },
+        {
+          "value": "oncology",
+          "label": "Oncology",
+          "icon": "IconMicroscope",
+          "color": "bg-green-600"
+        },
+        {
+          "value": "general",
+          "label": "General Practice",
+          "icon": "IconUser",
+          "color": "bg-gray-600"
+        }
+      ]
+    },
+    {
+      "id": "experience",
+      "title": "What's your experience level?",
+      "description": "Help us tailor simulations to your needs",
+      "type": "single-select",
+      "options": [
+        {
+          "value": "beginner",
+          "label": "Beginner (0-2 years)",
+          "icon": "IconBook",
+          "color": "bg-green-500"
+        },
+        {
+          "value": "intermediate",
+          "label": "Intermediate (2-5 years)",
+          "icon": "IconTarget",
+          "color": "bg-yellow-500"
+        },
+        {
+          "value": "advanced",
+          "label": "Advanced (5+ years)",
+          "icon": "IconChartBar",
+          "color": "bg-red-500"
+        }
+      ]
+    },
+    {
+      "id": "studyLevel",
+      "title": "What's your study level?",
+      "description": "Select your study level",
+      "type": "single-select",
+      "options": [
+        {
+          "value": "pre-undergraduate",
+          "label": "Pre-Undergraduate",
+          "icon": "IconBook",
+          "color": "bg-green-500"
+        },
+        {
+          "value": "undergraduate",
+          "label": "Undergraduate",
+          "icon": "IconBook",
+          "color": "bg-red-500"
+        },
+        {
+          "value": "graduate",
+          "label": "Graduate",
+          "icon": "IconBook",
+          "color": "bg-blue-500"
+        },
+        {
+          "value": "other",
+          "label": "Other",
+          "icon": "IconBook",
+          "color": "bg-purple-500"
+        }
+      ]
+    },
+    {
+      "id": "goals",
+      "title": "What do you want to improve?",
+      "description": "Select all that apply",
+      "type": "multi-select",
+      "options": [
+        {
+          "value": "communication",
+          "label": "Patient Communication",
+          "icon": "IconMessage",
+          "color": "bg-blue-500"
+        },
+        {
+          "value": "diagnosis",
+          "label": "Diagnostic Skills",
+          "icon": "IconBrain",
+          "color": "bg-purple-500"
+        },
+        {
+          "value": "procedures",
+          "label": "Clinical Procedures",
+          "icon": "IconStethoscope",
+          "color": "bg-green-500"
+        },
+        {
+          "value": "teamwork",
+          "label": "Team Collaboration",
+          "icon": "IconUsers",
+          "color": "bg-orange-500"
+        },
+        {
+          "value": "emergency",
+          "label": "Emergency Response",
+          "icon": "IconBook",
+          "color": "bg-red-500"
+        },
+        {
+          "value": "ethics",
+          "label": "Medical Ethics",
+          "icon": "IconBook",
+          "color": "bg-indigo-500"
+        }
+      ]
+    },
+    {
+      "id": "interests",
+      "title": "What interests you most?",
+      "description": "Choose your preferred simulation types",
+      "type": "multi-select",
+      "options": [
+        {
+          "value": "video",
+          "label": "Video Simulations",
+          "icon": "IconVideo",
+          "color": "bg-blue-500"
+        },
+        {
+          "value": "case_studies",
+          "label": "Case Studies",
+          "icon": "IconFileDescription",
+          "color": "bg-green-500"
+        },
+        {
+          "value": "role_play",
+          "label": "Role-Playing Scenarios",
+          "icon": "IconUsers",
+          "color": "bg-purple-500"
+        },
+        {
+          "value": "emergency",
+          "label": "Emergency Scenarios",
+          "icon": "IconBrain",
+          "color": "bg-red-500"
+        },
+        {
+          "value": "diagnostic",
+          "label": "Diagnostic Challenges",
+          "icon": "IconBrain",
+          "color": "bg-indigo-500"
+        },
+        {
+          "value": "procedural",
+          "label": "Procedural Training",
+          "icon": "IconStethoscope",
+          "color": "bg-orange-500"
+        }
+      ]
+    }
+  ]
+} 
