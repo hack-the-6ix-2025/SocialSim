@@ -226,7 +226,7 @@ export default function ProfilePage() {
 				/>
 			</div>
 
-			<div className="flex justify-start gap-12 mt-12">
+			<div className="flex justify-start gap-6 mt-12">
 				<Button
 					className="px-8 py-3 text-base font-medium"
 					variant="outline"

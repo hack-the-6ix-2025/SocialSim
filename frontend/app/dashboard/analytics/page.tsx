@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Search, TrendingUp, TrendingDown, Target, Clock, Award, BarChart3, Calendar, Filter } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { useSearchParams } from 'next/navigation'
 
 interface AnalyticsData {
   total_simulations: number
@@ -34,52 +36,127 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
+  const searchParams = useSearchParams()
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
+  const [recentPerformance, setRecentPerformance] = useState<any[]>([])
+  const [categoryPerformance, setCategoryPerformance] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [timeRange, setTimeRange] = useState('30d')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [trendData, setTrendData] = useState<any[]>([])
+  const [selectedSimulation, setSelectedSimulation] = useState<string | null>(null)
+
+  // Handle URL parameters
+  useEffect(() => {
+    const simulationParam = searchParams.get('simulation')
+    if (simulationParam) {
+      setSelectedSimulation(simulationParam)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     async function fetchAnalytics() {
-      const supabase = createClient()
-      
-      // Mock data for now - replace with actual API calls
-      const mockData: AnalyticsData = {
-        total_simulations: 24,
-        average_score: 78.5,
-        completion_rate: 92.3,
-        time_spent: 1560, // minutes
-        improvement_rate: 12.5,
-        top_categories: [
-          { category: 'Leadership', count: 8, score: 82.5 },
-          { category: 'Communication', count: 6, score: 76.2 },
-          { category: 'Problem Solving', count: 5, score: 79.8 },
-          { category: 'Team Management', count: 3, score: 71.4 },
-          { category: 'Decision Making', count: 2, score: 85.1 }
-        ],
-        recent_performance: [
-          { date: '2024-01-15', score: 85, simulation_name: 'Crisis Management' },
-          { date: '2024-01-14', score: 72, simulation_name: 'Team Leadership' },
-          { date: '2024-01-13', score: 91, simulation_name: 'Strategic Planning' },
-          { date: '2024-01-12', score: 68, simulation_name: 'Conflict Resolution' },
-          { date: '2024-01-11', score: 79, simulation_name: 'Project Management' }
-        ],
-        monthly_stats: [
-          { month: 'Jan 2024', simulations_completed: 8, average_score: 78.5 },
-          { month: 'Dec 2023', simulations_completed: 6, average_score: 75.2 },
-          { month: 'Nov 2023', simulations_completed: 5, average_score: 72.8 },
-          { month: 'Oct 2023', simulations_completed: 3, average_score: 68.9 },
-          { month: 'Sep 2023', simulations_completed: 2, average_score: 65.4 }
-        ]
+      try {
+        const res = await fetch('http://127.0.0.1:8000/sessions/all/history/')
+        if (!res.ok) throw new Error('Failed to fetch session history')
+        const data = await res.json()
+        console.log('Fetched session data:', data)
+
+        // Map backend fields to recent performance format
+        const mapped = data.map((item: any) => ({
+          simulation_name: item.associated_simulation ?? '',
+          category: item.category ?? '',
+          score: item.score ?? 0,
+          duration: item.actual_duration ?? 0,
+          completed_at: item.created_at ?? '',
+          completion_status: item.completion_status ?? '',
+        }))
+        setRecentPerformance(mapped)
+
+        // Group by category and calculate count and average score
+        const categoryMap: Record<string, { count: number; totalScore: number }> = {}
+        data.forEach((item: any) => {
+          const cat = item.category ?? 'Uncategorized'
+          if (!categoryMap[cat]) {
+            categoryMap[cat] = { count: 0, totalScore: 0 }
+          }
+          categoryMap[cat].count += 1
+          categoryMap[cat].totalScore += item.score ?? 0
+        })
+        const categories = Object.entries(categoryMap).map(([category, { count, totalScore }]) => ({
+          category,
+          count,
+          score: count > 0 ? (totalScore / count) : 0
+        }))
+        setCategoryPerformance(categories)
+
+        // Sort by created_at and map to { date, score }
+        const trend = data
+          .map((item: any) => ({
+            date: item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
+            score: item.score ?? 0
+          }))
+          .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        setTrendData(trend)
+
+        // Calculate analyticsData metrics
+        const total_simulations = data.length
+        const completedSessions = data.filter((item: any) => item.completion_status === 'completed')
+        const average_score = completedSessions.length > 0 ? (completedSessions.reduce((sum: number, item: any) => sum + (item.score ?? 0), 0) / completedSessions.length) : 0
+        const completion_rate = total_simulations > 0 ? (completedSessions.length / total_simulations) * 100 : 0
+        const time_spent = data.reduce((sum: number, item: any) => sum + (item.actual_duration ?? 0), 0)
+        // Dummy improvement rate for now
+        const improvement_rate = 0
+        // Top categories
+        const top_categories = categories.slice(0, 3)
+        // Recent performance
+        const recent_performance = mapped.slice(0, 5).map((item: any) => ({
+          date: item.completed_at,
+          score: item.score,
+          simulation_name: item.simulation_name
+        }))
+        // Monthly stats (dummy for now)
+        const monthly_stats: any[] = []
+
+        setAnalyticsData({
+          total_simulations,
+          average_score: Math.round(average_score),
+          completion_rate: Math.round(completion_rate),
+          time_spent,
+          improvement_rate,
+          top_categories,
+          recent_performance,
+          monthly_stats
+        })
+      } catch (err) {
+        setRecentPerformance([])
+        setCategoryPerformance([])
+        setTrendData([])
+        setAnalyticsData(null)
+      } finally {
+        setLoading(false)
       }
-      
-      setAnalyticsData(mockData)
-      setLoading(false)
     }
 
     fetchAnalytics()
   }, [])
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+  }
 
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60)
@@ -108,53 +185,26 @@ export default function AnalyticsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Analytics</h1>
         <p className="text-muted-foreground">
-          View your stats, feedback, and analytics for your simulation history. Track your progress and identify areas for improvement.
+          {selectedSimulation 
+            ? `Viewing analytics for simulation: ${selectedSimulation}`
+            : 'View your stats, feedback, and analytics for your simulation history. Track your progress and identify areas for improvement.'
+          }
         </p>
+        {selectedSimulation && (
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-800 text-sm">
+              <strong>Note:</strong> This page shows analytics for all simulations. For detailed simulation-specific analytics, 
+              the data would be filtered by the selected simulation ID: <code className="bg-blue-100 px-1 rounded">{selectedSimulation}</code>
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Filters and Search */}
-      <div className="mb-8 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            type="text"
-            placeholder="Search simulations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="1y">Last year</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
-              <SelectItem value="leadership">Leadership</SelectItem>
-              <SelectItem value="communication">Communication</SelectItem>
-              <SelectItem value="problem-solving">Problem Solving</SelectItem>
-              <SelectItem value="team-management">Team Management</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      {/* Filters and Search removed as requested */}
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
+        <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Simulations</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
@@ -167,7 +217,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-purple-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Average Score</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -180,7 +230,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-indigo-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
             <Award className="h-4 w-4 text-muted-foreground" />
@@ -193,7 +243,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-cyan-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Time Spent</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -209,55 +259,90 @@ export default function AnalyticsPage() {
 
       {/* Charts and Detailed Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Performance Chart */}
-        <Card>
+        {/* Performance Chart (now uses backend data) */}
+        <Card className="border-l-4 border-l-blue-500">
           <CardHeader>
             <CardTitle>Performance Trend</CardTitle>
             <CardDescription>Your score progression over time</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px] flex items-center justify-center bg-muted/20 rounded-lg">
-              <div className="text-center">
-                <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Performance chart will be displayed here</p>
-              </div>
+              {trendData.length > 1 ? (
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={trendData} margin={{ left: 16, right: 16, top: 16, bottom: 16 }}>
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center w-full">
+                  <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Not enough data for a trend chart</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Category Performance */}
-        <Card>
+        {/* Category Performance (now uses backend data) */}
+        <Card className="border-l-4 border-l-purple-500">
           <CardHeader>
             <CardTitle>Category Performance</CardTitle>
             <CardDescription>Your scores by simulation category</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {analyticsData?.top_categories.map((category, index) => (
+            {categoryPerformance.map((category, index) => (
               <div key={index} className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">{category.category}</span>
-                  <span className="text-sm text-muted-foreground">{category.score}%</span>
+                  <Badge 
+                    variant="outline" 
+                    className={`${
+                      category.category.toLowerCase() === 'medical' 
+                        ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+                        : category.category.toLowerCase() === 'disaster response'
+                        ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                        : category.category.toLowerCase() === 'leadership'
+                        ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                        : category.category.toLowerCase() === 'communication'
+                        ? 'border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100'
+                        : category.category.toLowerCase() === 'problem-solving'
+                        ? 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100'
+                        : category.category.toLowerCase() === 'team-management'
+                        ? 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {category.category}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">{category.score.toFixed(1)}%</span>
                 </div>
                 <Progress value={category.score} className="h-2" />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{category.count} simulations</span>
-                  <span>Avg: {category.score}%</span>
+                  <span>Avg: {category.score.toFixed(1)}%</span>
                 </div>
               </div>
             ))}
+            {categoryPerformance.length === 0 && !loading && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No category performance data available yet.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Performance Table */}
-      <Card>
+      {/* Recent Performance Table (now uses backend data) */}
+      <Card className="border-l-4 border-l-indigo-500">
         <CardHeader>
           <CardTitle>Recent Performance</CardTitle>
           <CardDescription>Your latest simulation results</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {analyticsData?.recent_performance.map((performance, index) => (
+            {recentPerformance.map((performance, index) => (
               <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
@@ -265,7 +350,7 @@ export default function AnalyticsPage() {
                   </div>
                   <div>
                     <p className="font-medium">{performance.simulation_name}</p>
-                    <p className="text-sm text-muted-foreground">{performance.date}</p>
+                    <p className="text-sm text-muted-foreground">{formatDate(performance.completed_at)}</p>
                   </div>
                 </div>
                 <Badge variant={performance.score >= 80 ? "default" : performance.score >= 60 ? "secondary" : "destructive"}>
@@ -273,9 +358,19 @@ export default function AnalyticsPage() {
                 </Badge>
               </div>
             ))}
+            {recentPerformance.length === 0 && !loading && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No simulation history available yet.</p>
+              </div>
+            )}
+            {loading && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Loading history...</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
     </div>
   )
-} 
+}

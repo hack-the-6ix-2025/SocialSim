@@ -52,40 +52,16 @@ def search_simulation_description(search_text: str = Query(...)):
         raise HTTPException(status_code=400, detail=str(e))
 
 # Filter simulations by category 
-@router.get("/simulations/category/")
-def filter_simulations_by_category(categories: list[str] = Query(...)):
+@router.get("/category/")
+def filter_sessions_by_category(categories: list[str] = Query(...)):
     try:
-        # Get category_ids for the given category names
-        category_ids_resp = (
-            supabase.table("categories")
-            .select("category_id")
-            .in_("name", categories)
-            .execute()
-        )
-        category_ids = [c["category_id"] for c in category_ids_resp.data]
-
-        if not category_ids:
-            return []
-
-        # Get simulation_ids from simulation_categories for those category_ids
-        simulation_ids_resp = (
-            supabase.table("simulation_categories")
-            .select("simulation_id")
-            .in_("category_id", category_ids)
-            .execute()
-        )
-        simulation_ids = list({s["simulation_id"] for s in simulation_ids_resp.data})
-
-        if not simulation_ids:
-            return []
-
-        # Get simulations with those simulation_ids
-        simulations_resp = (
+        # Get sessions where the 'categories' text column matches any of the provided categories
+        sessions_resp = (
             supabase.table("simulations")
             .select("*")
-            .in_("sim_id", simulation_ids)
+            .in_("category", categories)
             .execute()
         )
-        return simulations_resp.data or []
+        return sessions_resp.data or []
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

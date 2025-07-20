@@ -1,8 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
-import { Button } from '@/components/ui/button'
 import { Metadata } from 'next'
+import { StartSimulationButton } from './start-simulation-button'
 
 interface Simulation {
   sim_id: string
@@ -92,9 +92,7 @@ export default async function SimulationPage({ params }: SimulationPageProps) {
           
           {/* Start Simulation Button */}
           <div className="pt-6">
-            <Button size="lg" className="px-8 py-3 text-lg">
-              Start Simulation
-            </Button>
+            <StartSimulationButton simId={simId} />
           </div>
         </div>
       </div>

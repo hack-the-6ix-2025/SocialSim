@@ -13,6 +13,8 @@ import {
 	IconSearch,
 	IconSettings,
 	IconUsers,
+	IconDiamond,
+	IconBrandLine
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -49,16 +51,6 @@ const data = {
 			title: "History",
 			url: "/dashboard/history",
 			icon: IconReport,
-		},
-		{
-			title: "My Simulations",
-			url: "/dashboard/my-simulations",
-			icon: IconFolder,
-		},
-		{
-			title: "Collaborate",
-			url: "/dashboard/collaborate",
-			icon: IconUsers,
 		},
 	],
 	navClouds: [
@@ -134,9 +126,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 							className="data-[slot=sidebar-menu-button]:!p-1.5"
 						>
 							<Link href="/dashboard">
-								<IconInnerShadowTop className="!size-5" />
+								<IconBrandLine className="!size-5" />
 								<span className="text-base font-semibold">
-									Skibidi Simulations
+									Social Sim
 								</span>
 							</Link>
 						</SidebarMenuButton>

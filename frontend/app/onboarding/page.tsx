@@ -146,7 +146,7 @@ export default function OnboardingPage() {
 	}
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+		<div className="min-h-screen bg-background flex items-center justify-center p-4">
 			<div className="w-full max-w-4xl">
 				{/* Main Content */}
 
@@ -155,7 +155,7 @@ export default function OnboardingPage() {
 						{/* Progress Bar */}
 						<div className="mb-8">
 							<div className="flex items-center justify-between mb-2">
-								<span className="text-sm font-medium text-gray-600">
+								<span className="text-sm font-medium text-muted-foreground">
 									Step {currentStep + 1} of {onboardingSteps.length}
 								</span>
 							</div>
@@ -169,18 +169,18 @@ export default function OnboardingPage() {
 								exit={{ opacity: 0, x: -20 }}
 								transition={{ duration: 0.3 }}
 							>
-								<Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+								<Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm border-l-4 border-l-blue-500">
 									<CardHeader className="text-center pb-8">
 										{/* <motion.div
 									initial={{ scale: 0.8 }}
 									animate={{ scale: 1 }}
 									transition={{ delay: 0.1 }}
 								> */}
-										<CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+										<CardTitle className="text-3xl font-bold">
 											{currentStepData.title}
 										</CardTitle>
 										{/* </motion.div> */}
-										<CardDescription className="text-lg text-gray-600 mt-2">
+										<CardDescription className="text-lg text-muted-foreground mt-2">
 											{currentStepData.description}
 										</CardDescription>
 									</CardHeader>
@@ -202,8 +202,8 @@ export default function OnboardingPage() {
 															onClick={() => handleOptionSelect(option.value)}
 															className={`w-full p-6 rounded-xl border-2 transition-all duration-200 group ${
 																selected
-																	? "border-blue-500 bg-blue-50"
-																	: "border-gray-200 bg-white hover:border-gray-400"
+																	? "border-primary bg-primary/10"
+																	: "border-border bg-card hover:border-border/50"
 															}`}
 														>
 															<div className="flex flex-col items-center space-y-3">
@@ -214,7 +214,7 @@ export default function OnboardingPage() {
 																</div>
 																<span
 																	className={`font-medium text-center ${
-																		selected ? "text-blue-700" : "text-gray-700"
+																		selected ? "text-primary" : "text-foreground"
 																	}`}
 																>
 																	{option.label}
@@ -250,7 +250,7 @@ export default function OnboardingPage() {
 
 											<div className="flex items-center space-x-4">
 												{currentStepData.type === "multi-select" && (
-													<span className="text-sm text-gray-500">
+													<span className="text-sm text-muted-foreground">
 														{Array.isArray(
 															onboardingData[
 																currentStepData.id as keyof OnboardingData
@@ -269,7 +269,7 @@ export default function OnboardingPage() {
 												<Button
 													onClick={handleNext}
 													disabled={!canProceed() || isLoading}
-													className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+													className="flex items-center space-x-2"
 												>
 													{isLoading ? (
 														<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -304,15 +304,16 @@ export default function OnboardingPage() {
 							}}
 							className="text-center mt-8 flex flex-col items-center gap-6"
 						>
-							<p className="text-gray-500 text-6xl bold">
+							<p className="text-muted-foreground text-6xl bold">
 								Welcome to{" "}
-								<span className="font-semibold text-blue-600">
-									Skibidi Simulations
+								{/* text gradient blue to purple */}
+								<span className="font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+									Social Sim		
 								</span>
 								!
 							</p>
 
-							<p className="text-2xl text-gray-500">
+							<p className="text-2xl text-muted-foreground">
 								Let&apos;s personalize your experience.
 							</p>
 
@@ -320,7 +321,7 @@ export default function OnboardingPage() {
 								onClick={() => {
 									setIntroPage(false)
 								}}
-								className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+								className="flex items-center space-x-2"
 							>
 								{isLoading ? (
 									<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

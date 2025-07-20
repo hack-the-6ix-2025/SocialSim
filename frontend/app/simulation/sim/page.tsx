@@ -1,167 +1,484 @@
-'use client';
+"use client"
 
-import { useState, useRef, useEffect } from 'react';
-import { FaVideo, FaVideoSlash, FaMicrophone, FaMicrophoneSlash, FaStop, FaRedo, FaUserCircle } from 'react-icons/fa';
+import { Button } from "@/components/ui/button"
+import { CVIProvider } from "../../../components/cvi/components/cvi-provider"
+import { Conversation } from "../../../components/cvi/components/conversation"
+import { useState, useEffect } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { ArrowRight, ArrowLeft } from "lucide-react"
+import { createClient } from "@/utils/supabase/client"
+
+interface Simulation {
+  sim_id: string
+  name: string
+  description: string
+  system_prompt: string
+  category: string
+}
 
 export default function SimulationPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const conversationUrlFromParams = searchParams.get("conversationUrl")
+  const simIdFromParams = searchParams.get("simId")
 
-  const [cameraOn, setCameraOn] = useState(true);
-  const [micOn, setMicOn] = useState(true);
-  const userVideoRef = useRef<HTMLVideoElement>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const [micActive, setMicActive] = useState(false);
+  /* 
+      1. User clicks "Start conversation"
+          ↓
+      2. createPersona() → Tavus API → Returns persona_id
+          ↓
+      3. createConversation(persona_id) → Tavus API → Returns conversation_url
+          ↓
+      4. setConversationUrl(url) → Triggers useEffect in Conversation component
+          ↓
+      5. joinCall({ url }) → Daily.co → Joins video room
+          ↓
+      6. Tavus AI replica joins the room (user_id contains 'tavus-replica')
+          ↓
+      7. useReplicaIDs() detects AI participant
+          ↓
+      8. MainVideo shows AI replica, PreviewVideos shows your camera
+          ↓
+      9. Real-time conversation begins!
+  */
 
-  useEffect(() => {
-    let stopped = false;
-    // Request both video and audio, but enable/disable tracks based on state
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then((mediaStream) => {
-        if (stopped) {
-          mediaStream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-        mediaStreamRef.current = mediaStream;
-        // Set video stream
-        if (userVideoRef.current) {
-          userVideoRef.current.srcObject = mediaStream;
-        }
-        // Enable/disable tracks based on state
-        mediaStream.getVideoTracks().forEach((track) => {
-          track.enabled = cameraOn;
-        });
-        mediaStream.getAudioTracks().forEach((track) => {
-          track.enabled = micOn;
-        });
-        // --- Microphone activity detection ---
-        let audioContext: AudioContext | null = null;
-        let analyser: AnalyserNode | null = null;
-        let dataArray: Uint8Array | null = null;
-        let source: MediaStreamAudioSourceNode | null = null;
-        let animationId: number;
-        if (micOn && mediaStream.getAudioTracks().length > 0) {
-          audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-          analyser = audioContext.createAnalyser();
-          source = audioContext.createMediaStreamSource(mediaStream);
-          source.connect(analyser);
-          analyser.fftSize = 256;
-          dataArray = new Uint8Array(analyser.frequencyBinCount);
-          const checkMic = () => {
-            if (!analyser || !dataArray) return;
-            analyser.getByteTimeDomainData(dataArray);
-            // Calculate volume (RMS)
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-              const val = dataArray[i] - 128;
-              sum += val * val;
-            }
-            const rms = Math.sqrt(sum / dataArray.length);
-            setMicActive(rms > 10); // Threshold for activity
-            animationId = requestAnimationFrame(checkMic);
-          };
-          checkMic();
-        }
-        // Cleanup
-        return () => {
-          if (audioContext) {
-            audioContext.close();
-          }
-          if (animationId) {
-            cancelAnimationFrame(animationId);
-          }
-        };
-      })
-      .catch((err) => {
-        // Optionally handle error
-      });
-    return () => {
-      stopped = true;
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-        mediaStreamRef.current = null;
+  // conversation url for joining the conversation
+  const [conversationUrl, setConversationUrl] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [status, setStatus] = useState("")
+  const [showControls, setShowControls] = useState(true)
+  const [simulation, setSimulation] = useState<Simulation | null>(null)
+  const [isLoadingSimulation, setIsLoadingSimulation] = useState(false)
+
+  // Fetch simulation data if simId is provided
+  const fetchSimulation = async (simId: string) => {
+    try {
+      setIsLoadingSimulation(true)
+      const supabase = createClient()
+
+      const { data, error } = await supabase
+        .from("simulations")
+        .select("sim_id, name, description, system_prompt, category")
+        .eq("sim_id", simId)
+        .single()
+
+      if (error || !data) {
+        console.error("Error fetching simulation:", error)
+        setStatus("Error: Could not load simulation data")
+        return
       }
-    };
-  }, []);
 
-  // Toggle camera/mic tracks when state changes
-  useEffect(() => {
-    const stream = mediaStreamRef.current;
-    if (stream) {
-      stream.getVideoTracks().forEach((track) => {
-        track.enabled = cameraOn;
-      });
-      stream.getAudioTracks().forEach((track) => {
-        track.enabled = micOn;
-      });
+      setSimulation(data)
+      setStatus("Simulation loaded successfully")
+    } catch (error) {
+      console.error("Error fetching simulation:", error)
+      setStatus("Error: Could not load simulation data")
+    } finally {
+      setIsLoadingSimulation(false)
     }
-  }, [cameraOn, micOn]);
+  }
+
+  // Check if conversation URL was passed via URL params
+  useEffect(() => {
+    if (conversationUrlFromParams) {
+      setConversationUrl(conversationUrlFromParams)
+      setStatus("Conversation URL received from URL parameters")
+      setShowControls(false)
+    }
+  }, [conversationUrlFromParams])
+
+  // Fetch simulation data if simId is provided
+  useEffect(() => {
+    if (simIdFromParams) {
+      fetchSimulation(simIdFromParams)
+    }
+  }, [simIdFromParams])
+
+  const createPersona = async (simulationData?: Simulation) => {
+    try {
+      console.log("Creating persona...")
+      const response = await fetch("/api/tavus", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "createPersona",
+          simulation: simulationData,
+        }),
+      })
+
+      console.log("Response status:", response.status)
+      console.log("Response ok:", response.ok)
+      console.log(
+        "Response headers:",
+        Object.fromEntries(response.headers.entries())
+      )
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Error response text:", errorText)
+
+        console.log("Response status:", response.status)
+
+        if (response.status === 402) {
+          throw new Error("Out of credits")
+        } else {
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText} out of credits`
+          )
+        }
+      }
+
+      const data = await response.json()
+      console.log("Raw response data:", data)
+      console.log("Data type:", typeof data)
+      console.log("Data keys:", Object.keys(data))
+      return data
+    } catch (error) {
+      console.error("Error creating persona:", error)
+      throw error
+    }
+  }
+
+  const createConversation = async (personaId: string) => {
+    try {
+      console.log("Creating conversation with persona:", personaId)
+      const response = await fetch("/api/tavus", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "createConversation",
+          personaId,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status} (Out of credits)`)
+      }
+
+      const data = await response.json()
+      console.log("Conversation created:", data)
+      return data
+    } catch (error) {
+      console.error("Error creating conversation:", error)
+      throw error
+    }
+  }
+
+  const handleStartConversation = async () => {
+    try {
+      setIsLoading(true)
+      setStatus("Creating persona...")
+      console.log("Starting conversation flow...")
+
+      const personaData = await createPersona(simulation || undefined)
+      console.log("Persona data received:", personaData)
+
+      if (personaData && personaData.persona_id) {
+        setStatus("Creating conversation...")
+        console.log("Persona ID:", personaData.persona_id)
+        const conversationData = await createConversation(
+          personaData.persona_id
+        )
+        console.log("Conversation data received:", conversationData)
+
+        if (conversationData && conversationData.conversation_url) {
+          setStatus("Joining conversation...")
+          console.log(
+            "Setting conversation URL:",
+            conversationData.conversation_url
+          )
+          setConversationUrl(conversationData.conversation_url)
+          setShowControls(false)
+        } else {
+          console.error("No conversation URL in response:", conversationData)
+          setStatus("Error: No conversation URL received")
+        }
+      } else {
+        console.error("No persona ID in response:", personaData)
+        setStatus("Error: No persona ID received")
+      }
+    } catch (error) {
+      console.error("Error starting conversation:", error)
+      setStatus(
+        `Error: ${error instanceof Error ? error.message : "Unknown error"}`
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleConversationLeave = async () => {
+    setConversationUrl("")
+    setStatus("Conversation ended")
+    setShowControls(true)
+    
+    // Add history entry when simulation is completed
+    if (simIdFromParams) {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (user) {
+          const { error } = await supabase
+            .from('history')
+            .insert({
+              user_id: user.id,
+              simulation_id: simIdFromParams,
+            })
+          
+          if (error) {
+            console.error('Failed to create history entry:', error)
+          } else {
+            console.log('History entry created successfully')
+          }
+        }
+      } catch (error) {
+        console.error('Error creating history entry:', error)
+      }
+    }
+  }
+
+  const handleNext = () => {
+    // Pass simulation data to summary page
+    const summaryUrl = simulation
+      ? `/simulation/summary?simId=${
+          simulation.sim_id
+        }&name=${encodeURIComponent(
+          simulation.name
+        )}&category=${encodeURIComponent(simulation.category)}`
+      : "/simulation/summary"
+    router.push(summaryUrl)
+  }
+
+  const handleRestart = () => {
+    // Restart the same simulation
+    if (simIdFromParams) {
+      router.push(`/simulation/sim?simId=${simIdFromParams}`)
+    } else {
+      router.push("/simulation/sim")
+    }
+  }
 
   return (
-    <div className="relative min-h-screen bg-white flex flex-col">
-     
-
-      {/* Main Content: Patient Video Frame */}
-      <div className="flex-1 flex items-center justify-center">
-        <div
-          className="w-[90vw] h-[68vw] max-w-[1400px] max-h-[94vh] aspect-video rounded-2xl bg-gray-900 flex items-center justify-center shadow-2xl border-4 border-gray-300 overflow-hidden relative transition-all duration-300 mb-4 mt-6"
-        >
-          {/* Placeholder for patient video */}
-          <div className="w-full h-full bg-black flex items-center justify-center text-white text-4xl font-semibold">
-            Patient Video
-          </div>
-          {/* Optionally, add a label or overlay */}
-          <div className="absolute top-4 left-4 bg-white/80 text-gray-800 px-5 py-2 rounded-full text-lg font-medium shadow">Patient</div>
-          {/* User Camera Preview overlayed in bottom right */}
-          <div className="absolute bottom-6 right-6">
-            <div className={`w-56 h-36 rounded-lg flex items-center justify-center shadow-lg border overflow-hidden transition-all duration-200 ${micActive ? 'ring-4 ring-blue-400 border-blue-400 bg-blue-100' : 'bg-gray-200'}`}>
-              {cameraOn ? (
-                <video
-                  ref={userVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover bg-black"
-                />
-              ) : (
-                <FaVideoSlash className="text-4xl text-gray-400" />
-              )}
+    <>
+      <CVIProvider>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+          {/* Header */}
+          <div className="bg-white shadow-sm border-b">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    {simulation
+                      ? simulation.name
+                      : "AI Conversation Simulation"}
+                  </h1>
+                  <p className="text-gray-600 mt-1">
+                    {simulation
+                      ? simulation.description
+                      : "Practice your communication skills with an AI replica"}
+                  </p>
+                </div>
+                {!conversationUrl && (
+                  <Button
+                    onClick={() => router.push("/dashboard/discover")}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Discover
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Bottom Control Bar */}
-      <div className="absolute left-0 w-full flex justify-center" style={{ bottom: '40px' }}>
-        <div className="flex gap-8 bg-white/80 px-8 py-4 rounded-xl shadow-lg border">
-          <button
-            className={`p-3 rounded-full ${cameraOn ? 'bg-blue-100' : 'bg-gray-200'} hover:bg-blue-200`}
-            onClick={() => setCameraOn((on) => !on)}
-            aria-label="Toggle Camera"
-          >
-            {cameraOn ? <FaVideo className="text-xl text-blue-600" /> : <FaVideoSlash className="text-xl text-gray-500" />}
-          </button>
-          <button
-            className={`p-3 rounded-full ${micOn ? 'bg-blue-100' : 'bg-gray-200'} hover:bg-blue-200`}
-            onClick={() => setMicOn((on) => !on)}
-            aria-label="Toggle Microphone"
-          >
-            {micOn ? <FaMicrophone className="text-xl text-blue-600" /> : <FaMicrophoneSlash className="text-xl text-gray-500" />}
-          </button>
-          <button
-            className="p-3 rounded-full bg-red-100 hover:bg-red-200"
-            aria-label="Stop"
-          >
-            <FaStop className="text-xl text-red-600" />
-          </button>
-          <button
-            className="p-3 rounded-full bg-gray-100 hover:bg-gray-200"
-            aria-label="Restart"
-          >
-            <FaRedo className="text-xl text-gray-600" />
-          </button>
-        </div>
-      </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+            {showControls && (
+              <div className="text-center mb-8">
+                <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl mx-auto">
+                  {status === "Conversation ended" ? (
+                    // Conversation ended state
+                    <div className="mb-6">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg
+                          className="w-8 h-8 text-green-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                      <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                        Simulation Completed!
+                      </h2>
+                      <p className="text-gray-600 leading-relaxed mb-4">
+                        Great job! Your{" "}
+                        {simulation?.name || "conversation simulation"} has been
+                        completed. You can now review your session and see your
+                        performance summary.
+                      </p>
 
-      {/* User Camera Preview moved inside patient video frame */}
-    </div>
-  );
+                      {/* Simulation Overview */}
+                      {simulation && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                          <h3 className="font-semibold text-blue-900 mb-2">
+                            Simulation Overview
+                          </h3>
+                          <div className="space-y-2 text-sm text-blue-800">
+                            <div>
+                              <strong>Scenario:</strong> {simulation.name}
+                            </div>
+                            <div>
+                              <strong>Category:</strong> {simulation.category}
+                            </div>
+                            <div>
+                              <strong>Description:</strong>{" "}
+                              {simulation.description}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : isLoadingSimulation ? (
+                    // Loading simulation state
+                    <div className="mb-6">
+                      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                      <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                        Loading Simulation...
+                      </h2>
+                      <p className="text-gray-600 leading-relaxed">
+                        Please wait while we load your simulation data.
+                      </p>
+                    </div>
+                  ) : (
+                    // Initial state
+                    <div className="mb-6">
+                      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg
+                          className="w-8 h-8 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                      <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                        Ready to Start Your Conversation?
+                      </h2>
+                      <p className="text-gray-600 leading-relaxed">
+                        {simulation
+                          ? `Begin an interactive conversation with our AI replica for the "${simulation.name}" simulation. This scenario will help you practice your communication skills in a safe, controlled environment. The AI will respond naturally to your questions and engage in meaningful dialogue based on the ${simulation.category} scenario.`
+                          : `Begin an interactive conversation with our AI replica. This simulation will help you practice your communication skills in a safe, controlled environment. The AI will respond naturally to your questions and engage in meaningful dialogue.`}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {status === "Conversation ended" ? (
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <Button
+                          onClick={handleRestart}
+                          variant="outline"
+                          size="lg"
+                          className="px-8 py-3 text-lg font-medium"
+                        >
+                          <div className="flex items-center gap-2">
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                              />
+                            </svg>
+                            Restart Simulation
+                          </div>
+                        </Button>
+                        <Button
+                          onClick={handleNext}
+                          size="lg"
+                          className="px-8 py-3 text-lg font-medium"
+                        >
+                          <div className="flex items-center gap-2">
+                            View Summary
+                            <ArrowRight className="w-5 h-5" />
+                          </div>
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={handleStartConversation}
+                        disabled={isLoading || isLoadingSimulation}
+                        size="lg"
+                        className="w-full sm:w-auto px-8 py-3 text-lg font-medium"
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Creating Conversation...
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {simulation
+                              ? `Start ${simulation.name} Simulation`
+                              : "Start Conversation"}
+                            <ArrowRight className="w-5 h-5" />
+                          </div>
+                        )}
+                      </Button>
+                    )}
+
+                    {status && status !== "Conversation ended" && (
+                      <div
+                        className={`p-4 rounded-lg text-sm mt-4 ${
+                          status.includes("Error")
+                            ? "bg-red-50 text-red-700 border border-red-200"
+                            : "bg-blue-50 text-blue-700 border border-blue-200"
+                        }`}
+                      >
+                        {status}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {conversationUrl && (
+              <div className="h-[600px] -mt-16 mb-24">
+                <Conversation
+                  onLeave={handleConversationLeave}
+                  conversationUrl={conversationUrl}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </CVIProvider>
+    </>
+  )
 }

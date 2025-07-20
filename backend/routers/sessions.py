@@ -43,7 +43,7 @@ def add_session_to_database(session: SessionCreate):
         raise HTTPException(status_code=400, detail=str(e))
 
 # Fetch all session history
-@router.get("/history/")
+@router.get("/all/history/")
 def get_all_previous_sessions():
     response = (
         supabase.table("sessions")
@@ -71,39 +71,15 @@ def get_simulation(session_id : int):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
-# Filter sessions by category 
+# Filter sessions by category (one category per session, stored as text)
 @router.get("/category/")
 def filter_sessions_by_category(categories: list[str] = Query(...)):
     try:
-        # Get category_ids for the given category names
-        category_ids_resp = (
-            supabase.table("categories")
-            .select("category_id")
-            .in_("name", categories)
-            .execute()
-        )
-        category_ids = [c["category_id"] for c in category_ids_resp.data]
-
-        if not category_ids:
-            return []
-
-        # Get session_ids from session_categories for those category_ids
-        session_ids_resp = (
-            supabase.table("session_categories")
-            .select("session_id")
-            .in_("category_id", category_ids)
-            .execute()
-        )
-        session_ids = list({s["session_id"] for s in session_ids_resp.data})
-
-        if not session_ids:
-            return []
-
-        # Get sessions with those session_ids
+        # Get sessions where the 'categories' text column matches any of the provided categories
         sessions_resp = (
             supabase.table("sessions")
             .select("*")
-            .in_("session_id", session_ids)
+            .in_("categories", categories)
             .execute()
         )
         return sessions_resp.data or []
