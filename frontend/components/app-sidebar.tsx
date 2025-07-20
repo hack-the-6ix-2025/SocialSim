@@ -52,11 +52,6 @@ const data = {
 			url: "/dashboard/history",
 			icon: IconReport,
 		},
-		{
-			title: "My Simulations",
-			url: "/dashboard/my-simulations",
-			icon: IconFolder,
-		},
 	],
 	navClouds: [
 		{
