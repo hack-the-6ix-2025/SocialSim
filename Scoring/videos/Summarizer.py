@@ -1,4 +1,3 @@
-import pandas as pd
 from twelvelabs import TwelveLabs
 from dotenv import load_dotenv
 import os
@@ -126,15 +125,26 @@ class Summarizer:
         """
         drive_service = self.drive()
         query = f"'{folder_id}' in parents and trashed = false"
+        video_urls = []
+        page_token = None
 
-        results = drive_service.files().list(
-            q=query,
-            fields="files(id, name, webContentLink)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True
-        ).execute()
-
-        return results.get('files', [])
+        while True:
+            results = drive_service.files().list(
+                q=f"'{folder_id}' in parents and trashed=false",
+                includeItemsFromAllDrives=True,
+                supportsAllDrives=True,
+                fields="nextPageToken, files(id, name)",
+                pageToken=page_token
+            ).execute()
+            files = results.get('files', [])
+            for f in files:
+                public_url = f"https://drive.google.com/uc?export=download&id={f['id']}"
+                video_urls.append({'id': f['id'], 'name': f['name'], 'url': public_url})
+            page_token = results.get('nextPageToken')
+            if not page_token:
+                break
+            time.sleep(0.1)
+        return video_urls
 
 
 if __name__ == "__main__":    
