@@ -1,0 +1,13 @@
+requests
+twelvelabs
+pandas
+python-dotenv
+google-genai
+pinecone-client
+scikit-learn
+numpy
+google-api-python-client
+google-auth-oauthlib
+google-auth
+yt-dlp
+pinecone

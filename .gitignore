@@ -7,3 +7,12 @@ venv
 datasets/
 *.txt
 *.json
+*.csv
+*.zip
+*.env
+**/downloads/
+!**/requirements.txt
+**/service_account.json
+!base_prompt_GEMINI.txt
+**/__pycache__/
+credentials.json
