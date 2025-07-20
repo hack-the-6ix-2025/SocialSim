@@ -110,7 +110,7 @@ class VectorEmbeddingPipeline:
                     print(f"Video processing failed: {video_title}")
                     return None
                 
-                time.sleep(10)
+                time.sleep(2)
                 wait_time += 10
             
             if wait_time >= max_wait:
@@ -127,28 +127,29 @@ class VectorEmbeddingPipeline:
             try:
                 # Get Pegasus summary using TwelveLabs summarize API
                 summary_results = self.summarizer.client.summarize(
-                    index_id=index_id,
+                    video_id=task_status.video_id,
                     type="summary"
                 )
                 
                 if summary_results and hasattr(summary_results, 'summary'):
                     video_data['pegasus_summary'] = summary_results.summary
-                    print(f"Got Pegasus summary for: {video_title}")
                 
                 # Get embeddings using search/generate
-                search_results = self.summarizer.client.search.query(
+                search_results = self.summarizer.client.index.video.retrieve(
                     index_id=index_id,
-                    query="get video embeddings",
-                    options=["visual", "audio"],
-                    model="marengo"
+                    id=task_status.video_id,
+                    embedding_option=["visual-text", "audio"],
                 )
-                
+
                 # Extract embeddings from search results
                 if search_results and hasattr(search_results, 'data') and search_results.data:
-                    embeddings = getattr(search_results.data[0], 'embeddings', None)
-                    if embeddings and isinstance(embeddings, np.ndarray):
+                    embeddings = search_results.embedding
+                    if embeddings is not None:
                         video_data['embeddings'] = embeddings
                         print(f"Got embeddings for: {video_title}")
+                    else: 
+                        print(f"No embeddings found for: {video_title}")
+                 
                 
             except Exception as e:
                 print(f"Error extracting data for {video_title}: {e}")
@@ -218,7 +219,7 @@ class VectorEmbeddingPipeline:
                 video_url = f"https://drive.google.com/uc?export=download&id={drive_id}"
                 video_data = self.get_video_data(video_url, video_title)   
 
-                if video_data is None:
+                if video_data is None or not video_data.get("pegasus_summary"):
                     failed_uploads += 1
                     results.append({
                         'video_id': video_id,
@@ -233,18 +234,18 @@ class VectorEmbeddingPipeline:
                 # Prepare vector data for RAGStorage with all required fields
                 # Note: RAGStorage requires "id" and "text" as exact field names
                 vector_data = {
-                    'id': video_id,                             # Required: Unique identifier
-                    'text': video_data['pegasus_summary'],      # Required: Pegasus summary as main text
-                    'video_title': video_title,                 # Original video title from CSV
-                    'eval_score': video_data['gemini_score'],   # Gemini evaluation score
-                    'embeddings': video_data['embeddings'],     # TwelveLabs embeddings
-                    
-                    # Additional metadata
-                    'video_url': video_url,
-                    'topic': row.get('topic', ''),
-                    'mi_quality': row.get('mi_quality', ''),
-                    'transcript_id': str(row.get('transcript_id', '')),
-                    'processed_date': time.strftime('%Y-%m-%d %H:%M:%S')
+                    "id": video_id,
+                    "values": video_data['embeddings'],   # embeddings vector as float list
+                    "metadata": {
+                        "text": video_data['pegasus_summary'],
+                        "video_title": video_title,
+                        "eval_score": video_data['gemini_score'],
+                        "video_url": video_url,
+                        "topic": row.get('topic', ''),
+                        "mi_quality": row.get('mi_quality', ''),
+                        "transcript_id": str(row.get('transcript_id', '')),
+                        "processed_date": time.strftime('%Y-%m-%d %H:%M:%S')
+                    }
                 }
                 
                 vectors_to_store.append(vector_data)
@@ -255,7 +256,7 @@ class VectorEmbeddingPipeline:
                     'video_url': video_url,
                     'video_title': video_title,
                     'status': 'success',
-                    'embedding_dimension': len(video_data['embeddings']) if video_data is not None else 0,
+                    'embedding_dimension': len(video_data['embeddings']) if video_data and video_data['embeddings'] is not None else 0,
                     'has_summary': bool(video_data['pegasus_summary']),
                     'has_gemini_score': bool(video_data['gemini_score']),
                     'gemini_score': video_data['gemini_score']
@@ -263,14 +264,27 @@ class VectorEmbeddingPipeline:
                 
                 print(f"Prepared for storage ({successful_uploads}/{len(videos_list)}): {video_title}")
                 
-                # Store in batches of 10 to avoid memory issues
-                if len(vectors_to_store) >= 10:
-                    self.rag_storage.store(vectors_to_store)
-                    print(f"Stored batch of {len(vectors_to_store)} vectors")
-                    vectors_to_store = []
+                try:
+                    if len(vectors_to_store) >= 5:
+                        self.rag_storage.store(vectors_to_store)
+                        print(f"Stored batch of {len(vectors_to_store)} vectors")
+                        vectors_to_store = []
+
+                                    # Rate limiting
+                    time.sleep(2)
+                except Exception as e:
+                    failed_uploads += 1
+                    print(f"❌ Failed to store vector for {video_title}: {e}")
+                    results.append({
+                        'video_id': video_id,
+                        'video_url': video_url,
+                        'video_title': video_title,
+                        'status': 'store_failed',
+                        'embedding_dimension': 0,
+                        'error': str(e)
+                    })
+                    continue
                 
-                # Rate limiting
-                time.sleep(2)
                 
             except Exception as e:
                 failed_uploads += 1

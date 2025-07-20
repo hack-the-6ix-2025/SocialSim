@@ -96,11 +96,13 @@ class Summarizer:
     def summarize(self, index_name: str, video_url: str):
         # Ensure index exists and is fresh
         index_id = self.ensure_index(f"{index_name}_{time.strftime('%Y%m%d_%H%M%S')}")
+        
         if not index_id:
             print(f"Could not create or find index '{index_name}'.")
             return None
         # Now create summarization task
         task = self.client.task.create(index_id=index_id, url=video_url)
+
         return {
             "index_id": index_id,
             "index_name": index_name,
@@ -163,11 +165,3 @@ if __name__ == "__main__":
         local_path = f"https://drive.google.com/uc?export=download&id={video['id']}"
         print(local_path)
 
-        # Use local_path or a public URL for summarization
-        # If TwelveLabs needs a public URL, upload the file to somewhere accessible or use their local file support if available
-        # Here assuming it supports local file paths or you've a way to handle local uploads:
-        try:
-            result = summarizer.summarize("example_index", local_path)
-            print(f"Started summarization task for {file_name}: {result}")
-        except Exception as e:
-            print(f"Failed to summarize {file_name}: {e}")
