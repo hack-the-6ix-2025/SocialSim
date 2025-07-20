@@ -11,6 +11,12 @@ export const useCVICall = (): {
 
 	const joinCall = useCallback(
 		({ url }: { url: string }) => {
+			if (!url) {
+				console.error("No URL provided to joinCall");
+				return;
+			}
+			
+			console.log("Joining call with URL:", url);
 			daily?.join({
 				url: url,
 				inputSettings: {
@@ -20,6 +26,8 @@ export const useCVICall = (): {
 						},
 					},
 				},
+			}).catch((error) => {
+				console.error("Error joining call:", error);
 			});
 		},
 		[daily]
