@@ -55,11 +55,6 @@ const data = {
 			url: "/dashboard/my-simulations",
 			icon: IconFolder,
 		},
-		{
-			title: "Collaborate",
-			url: "/dashboard/collaborate",
-			icon: IconUsers,
-		},
 	],
 	navClouds: [
 		{
