@@ -5,6 +5,7 @@ import time
 from typing import List, Dict, Any, Optional
 from dotenv import load_dotenv
 import hashlib
+import numpy as np
 
 
 import sys
@@ -125,7 +126,7 @@ class VectorEmbeddingPipeline:
             
             try:
                 # Get Pegasus summary using TwelveLabs summarize API
-                summary_results = self.summarizer.client.summarize.create(
+                summary_results = self.summarizer.client.summarize(
                     index_id=index_id,
                     type="summary"
                 )
@@ -138,13 +139,14 @@ class VectorEmbeddingPipeline:
                 search_results = self.summarizer.client.search.query(
                     index_id=index_id,
                     query="get video embeddings",
-                    options=["visual", "audio"]
+                    options=["visual", "audio"],
+                    model="marengo"
                 )
                 
                 # Extract embeddings from search results
                 if search_results and hasattr(search_results, 'data') and search_results.data:
                     embeddings = getattr(search_results.data[0], 'embeddings', None)
-                    if embeddings:
+                    if embeddings and isinstance(embeddings, np.ndarray):
                         video_data['embeddings'] = embeddings
                         print(f"Got embeddings for: {video_title}")
                 
@@ -253,7 +255,7 @@ class VectorEmbeddingPipeline:
                     'video_url': video_url,
                     'video_title': video_title,
                     'status': 'success',
-                    'embedding_dimension': len(video_data['embeddings']),
+                    'embedding_dimension': len(video_data['embeddings']) if video_data is not None else 0,
                     'has_summary': bool(video_data['pegasus_summary']),
                     'has_gemini_score': bool(video_data['gemini_score']),
                     'gemini_score': video_data['gemini_score']
@@ -312,9 +314,10 @@ class VectorEmbeddingPipeline:
                 print(f"Exported {name}: {filepath}")
         
         # Export to pickle for easier loading
-        pickle_path = os.path.join(output_path, f"complete_dataset_{timestamp}.pkl")
-        pd.to_csv(datasets, pickle_path)
-        print(f"Exported complete dataset: {pickle_path}")
+        csv_path = os.path.join(output_path, f"complete_dataset_{timestamp}.csv")
+        complete_df = pd.concat(list(datasets.values()), ignore_index=True)
+        complete_df.to_csv(csv_path, index=False)
+        print(f"Exported complete dataset: {csv_path}")
         
         return output_path
 
