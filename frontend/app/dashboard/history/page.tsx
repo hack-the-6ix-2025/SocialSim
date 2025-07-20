@@ -192,8 +192,17 @@ export default function HistoryPage() {
 
       {/* History Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredHistory.map((entry) => (
-          <Card key={entry.id} className="hover:shadow-lg transition-shadow">
+        {filteredHistory.map((entry, index) => (
+          <Card 
+            key={entry.id} 
+            className={`hover:shadow-lg transition-shadow ${
+              index % 3 === 0 
+                ? 'border-l-4 border-l-blue-500' 
+                : index % 3 === 1 
+                ? 'border-l-4 border-l-purple-500'
+                : 'border-l-4 border-l-indigo-500'
+            }`}
+          >
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -212,7 +221,26 @@ export default function HistoryPage() {
             
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <Badge variant="outline">{entry.simulations.category}</Badge>
+                <Badge 
+                  variant="outline" 
+                  className={`${
+                    entry.simulations.category.toLowerCase() === 'medical' 
+                      ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+                      : entry.simulations.category.toLowerCase() === 'disaster response'
+                      ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                      : entry.simulations.category.toLowerCase() === 'leadership'
+                      ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                      : entry.simulations.category.toLowerCase() === 'communication'
+                      ? 'border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100'
+                      : entry.simulations.category.toLowerCase() === 'problem-solving'
+                      ? 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100'
+                      : entry.simulations.category.toLowerCase() === 'team-management'
+                      ? 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                      : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {entry.simulations.category}
+                </Badge>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Calendar className="w-4 h-4 mr-1" />
                   {getRelativeTime(entry.created_at)}
