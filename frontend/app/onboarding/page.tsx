@@ -169,7 +169,7 @@ export default function OnboardingPage() {
 								exit={{ opacity: 0, x: -20 }}
 								transition={{ duration: 0.3 }}
 							>
-								<Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+								<Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm border-l-4 border-l-blue-500">
 									<CardHeader className="text-center pb-8">
 										{/* <motion.div
 									initial={{ scale: 0.8 }}

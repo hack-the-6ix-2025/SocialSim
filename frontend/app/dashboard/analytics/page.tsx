@@ -204,7 +204,7 @@ export default function AnalyticsPage() {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
+        <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Simulations</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
@@ -217,7 +217,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-purple-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Average Score</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -230,7 +230,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-indigo-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
             <Award className="h-4 w-4 text-muted-foreground" />
@@ -243,7 +243,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-cyan-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Time Spent</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
@@ -260,7 +260,7 @@ export default function AnalyticsPage() {
       {/* Charts and Detailed Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Performance Chart (now uses backend data) */}
-        <Card>
+        <Card className="border-l-4 border-l-blue-500">
           <CardHeader>
             <CardTitle>Performance Trend</CardTitle>
             <CardDescription>Your score progression over time</CardDescription>
@@ -287,7 +287,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Category Performance (now uses backend data) */}
-        <Card>
+        <Card className="border-l-4 border-l-purple-500">
           <CardHeader>
             <CardTitle>Category Performance</CardTitle>
             <CardDescription>Your scores by simulation category</CardDescription>
@@ -296,7 +296,26 @@ export default function AnalyticsPage() {
             {categoryPerformance.map((category, index) => (
               <div key={index} className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">{category.category}</span>
+                  <Badge 
+                    variant="outline" 
+                    className={`${
+                      category.category.toLowerCase() === 'medical' 
+                        ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+                        : category.category.toLowerCase() === 'disaster response'
+                        ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                        : category.category.toLowerCase() === 'leadership'
+                        ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                        : category.category.toLowerCase() === 'communication'
+                        ? 'border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100'
+                        : category.category.toLowerCase() === 'problem-solving'
+                        ? 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100'
+                        : category.category.toLowerCase() === 'team-management'
+                        ? 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {category.category}
+                  </Badge>
                   <span className="text-sm text-muted-foreground">{category.score.toFixed(1)}%</span>
                 </div>
                 <Progress value={category.score} className="h-2" />
@@ -316,7 +335,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Recent Performance Table (now uses backend data) */}
-      <Card>
+      <Card className="border-l-4 border-l-indigo-500">
         <CardHeader>
           <CardTitle>Recent Performance</CardTitle>
           <CardDescription>Your latest simulation results</CardDescription>
