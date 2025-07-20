@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Search, TrendingUp, TrendingDown, Target, Clock, Award, BarChart3, Calendar, Filter } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { useSearchParams } from 'next/navigation'
 
 interface AnalyticsData {
   total_simulations: number
@@ -35,6 +36,7 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
+  const searchParams = useSearchParams()
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [recentPerformance, setRecentPerformance] = useState<any[]>([])
   const [categoryPerformance, setCategoryPerformance] = useState<any[]>([])
@@ -43,6 +45,15 @@ export default function AnalyticsPage() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [trendData, setTrendData] = useState<any[]>([])
+  const [selectedSimulation, setSelectedSimulation] = useState<string | null>(null)
+
+  // Handle URL parameters
+  useEffect(() => {
+    const simulationParam = searchParams.get('simulation')
+    if (simulationParam) {
+      setSelectedSimulation(simulationParam)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     async function fetchAnalytics() {
@@ -174,8 +185,19 @@ export default function AnalyticsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Analytics</h1>
         <p className="text-muted-foreground">
-          View your stats, feedback, and analytics for your simulation history. Track your progress and identify areas for improvement.
+          {selectedSimulation 
+            ? `Viewing analytics for simulation: ${selectedSimulation}`
+            : 'View your stats, feedback, and analytics for your simulation history. Track your progress and identify areas for improvement.'
+          }
         </p>
+        {selectedSimulation && (
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-800 text-sm">
+              <strong>Note:</strong> This page shows analytics for all simulations. For detailed simulation-specific analytics, 
+              the data would be filtered by the selected simulation ID: <code className="bg-blue-100 px-1 rounded">{selectedSimulation}</code>
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Filters and Search removed as requested */}

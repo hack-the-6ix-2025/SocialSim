@@ -211,10 +211,35 @@ export default function SimulationPage() {
     }
   }
 
-  const handleConversationLeave = () => {
+  const handleConversationLeave = async () => {
     setConversationUrl("")
     setStatus("Conversation ended")
     setShowControls(true)
+    
+    // Add history entry when simulation is completed
+    if (simIdFromParams) {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (user) {
+          const { error } = await supabase
+            .from('history')
+            .insert({
+              user_id: user.id,
+              simulation_id: simIdFromParams,
+            })
+          
+          if (error) {
+            console.error('Failed to create history entry:', error)
+          } else {
+            console.log('History entry created successfully')
+          }
+        }
+      } catch (error) {
+        console.error('Error creating history entry:', error)
+      }
+    }
   }
 
   const handleNext = () => {
