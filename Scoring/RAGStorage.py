@@ -1,3 +1,4 @@
+import time
 from pinecone import Pinecone
 import os
 from dotenv import load_dotenv
@@ -23,6 +24,8 @@ class RAGStorage:
                         "field_map":field_map
                     }
                 )
+
+                time.sleep(2)  
             except Exception as e:
                 print(f"Error creating index '{index_name}': {e}")
                 raise ValueError(f"Failed to create index: {e}")
@@ -51,24 +54,48 @@ class RAGStorage:
                 raise ValueError(f"Failed to store data: {e}")
         return True
 
-    def retrieve(self, index_name: str = None, limit: int = None):
+    def retrieve(self, index_name: str = None, limit: int = None, ids: list = None):
         # Retrieve vector embeddings from Pinecone based on index_name
         idx_name = index_name if index_name else self.index_name
         if idx_name is None:
             raise ValueError("Index name must be provided.")
         index = self.ragProcessor.Index(idx_name)
         try:
-            # Fetch all vectors in one go
-            results = index.fetch(
-                namespace=idx_name.replace("index", "namespace"),
-                limit=limit
-            )
-            if "vectors" not in results:
-                return []
-            return results["vectors"]
+            if ids:
+                # Fetch specific vectors by IDs
+                results = index.fetch(
+                    ids=ids,
+                    namespace=idx_name.replace("index", "namespace")
+                )
+                if "vectors" not in results:
+                    return {}
+                return results["vectors"]
+            else:
+                # Query all vectors using a dummy query to get all results
+                # Since we can't fetch all without IDs, we'll use query with a broad search
+                results = index.query(
+                    vector=[0.0] * 1536,  # Dummy vector - adjust dimension as needed
+                    top_k=limit or 10000,  # Default large number to get all
+                    include_metadata=True,
+                    namespace=idx_name.replace("index", "namespace")
+                )
+                
+                # Convert query results to fetch-like format
+                vectors = {}
+                if hasattr(results, 'matches'):
+                    for match in results.matches:
+                        vectors[match.id] = {
+                            'id': match.id,
+                            'values': match.values if hasattr(match, 'values') else [],
+                            'metadata': match.metadata if hasattr(match, 'metadata') else {}
+                        }
+                
+                return vectors
+                
         except Exception as e:
             print(f"Error retrieving vectors from index '{idx_name}': {e}")
-            raise ValueError(f"Failed to retrieve vectors: {e}")
+            # Return empty dict instead of raising error for better error handling
+            return {}
 
 if __name__ == "__main__":
     index_name = "example-index"

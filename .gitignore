@@ -5,7 +5,7 @@
 *.env
 **/downloads/
 !**/requirements.txt
-*/summarizer/service_account.json
+**/service_account.json
 !base_prompt_GEMINI.txt
 **/__pycache__/
 credentials.json

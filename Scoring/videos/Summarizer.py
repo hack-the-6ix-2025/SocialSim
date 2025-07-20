@@ -5,11 +5,8 @@ import os
 import requests
 import time
 
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
-import pickle
 
 class Summarizer:
     client: TwelveLabs
@@ -111,47 +108,56 @@ class Summarizer:
             "task_id": task.id
         }
 
-    def authenticate_drive(self):
-        creds = None
+    def drive(self):
         # Use the correct Google Drive API scope for reading files
         SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
-        if os.path.exists('token.pickle'):
-            with open('token.pickle', 'rb') as token:
-                creds = pickle.load(token)
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-                creds = flow.run_local_server(port=0)
-            with open('token.pickle', 'wb') as token:
-                pickle.dump(creds, token)
-        return build('drive', 'v3', credentials=creds)
+        SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), 'service_account.json') 
+
+        credentials = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE, 
+            scopes=SCOPES,
+        )
+
+        return build('drive', 'v3', credentials=credentials)
 
     def list_drive_videos(self, folder_id):
         """
         List public video files in a Google Drive folder and return their direct download URLs.
         """
-        drive_service = self.authenticate_drive()
-        query = f"'{folder_id}' in parents and mimeType contains 'video/' and trashed = false"
-        results = drive_service.files().list(q=query, fields="files(id, name)").execute()
-        files = results.get('files', [])
-        video_urls = []
-        for f in files:
-            public_url = f"https://drive.google.com/uc?export=download&id={f['id']}"
-            video_urls.append(public_url)
-        return video_urls
+        drive_service = self.drive()
+        query = f"'{folder_id}' in parents and trashed = false"
+
+        results = drive_service.files().list(
+            q=query,
+            fields="files(id, name, webContentLink)",
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
+        ).execute()
+
+        return results.get('files', [])
+
 
 if __name__ == "__main__":    
     summarizer = Summarizer()
-    index_name = "example_index"
-    target_filepath = os.path.join(
-        os.path.dirname(__file__), 
-        "datasets",
-        "all_videos_metadata.csv"
-    )
-    video_url = pd.read_csv(target_filepath)["video_url"].iloc[0]
-    print(f"Video URL: {video_url}")  # Debugging line to check the video URL
-    
-    print(summarizer.list_indexes())
-    result = summarizer.summarize(index_name, video_url)
+
+    load_dotenv() 
+    PARENT_FOLDER_ID = os.getenv('PARENT_FOLDER_ID') 
+
+    drive_service = summarizer.drive()
+    video_files = summarizer.list_drive_videos(PARENT_FOLDER_ID)
+    print(f"Found {len(video_files)} videos in Drive folder.")
+
+    for video in video_files:
+        file_id = video['id']
+        file_name = video['name']
+        local_path = f"https://drive.google.com/uc?export=download&id={video['id']}"
+        print(local_path)
+
+        # Use local_path or a public URL for summarization
+        # If TwelveLabs needs a public URL, upload the file to somewhere accessible or use their local file support if available
+        # Here assuming it supports local file paths or you've a way to handle local uploads:
+        try:
+            result = summarizer.summarize("example_index", local_path)
+            print(f"Started summarization task for {file_name}: {result}")
+        except Exception as e:
+            print(f"Failed to summarize {file_name}: {e}")

@@ -2,7 +2,7 @@ requests
 twelvelabs
 pandas
 python-dotenv
-google-generativeai
+google-genai
 pinecone-client
 scikit-learn
 numpy
@@ -10,3 +10,4 @@ google-api-python-client
 google-auth-oauthlib
 google-auth
 yt-dlp
+pinecone
