@@ -307,7 +307,7 @@ export default function OnboardingPage() {
 							<p className="text-gray-500 text-6xl bold">
 								Welcome to{" "}
 								<span className="font-semibold text-blue-600">
-									Skibidi Simulations
+									Social Sim
 								</span>
 								!
 							</p>

@@ -13,6 +13,8 @@ import {
 	IconSearch,
 	IconSettings,
 	IconUsers,
+	IconDiamond,
+	IconBrandLine
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -129,9 +131,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 							className="data-[slot=sidebar-menu-button]:!p-1.5"
 						>
 							<Link href="/dashboard">
-								<IconInnerShadowTop className="!size-5" />
+								<IconBrandLine className="!size-5" />
 								<span className="text-base font-semibold">
-									Skibidi Simulations
+									Social Sim
 								</span>
 							</Link>
 						</SidebarMenuButton>

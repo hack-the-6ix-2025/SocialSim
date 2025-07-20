@@ -55,24 +55,24 @@ export default function SimulationPage() {
     try {
       setIsLoadingSimulation(true)
       const supabase = createClient()
-      
+
       const { data, error } = await supabase
-        .from('simulations')
-        .select('sim_id, name, description, system_prompt, category')
-        .eq('sim_id', simId)
+        .from("simulations")
+        .select("sim_id, name, description, system_prompt, category")
+        .eq("sim_id", simId)
         .single()
-      
+
       if (error || !data) {
-        console.error('Error fetching simulation:', error)
-        setStatus('Error: Could not load simulation data')
+        console.error("Error fetching simulation:", error)
+        setStatus("Error: Could not load simulation data")
         return
       }
-      
+
       setSimulation(data)
-      setStatus('Simulation loaded successfully')
+      setStatus("Simulation loaded successfully")
     } catch (error) {
-      console.error('Error fetching simulation:', error)
-      setStatus('Error: Could not load simulation data')
+      console.error("Error fetching simulation:", error)
+      setStatus("Error: Could not load simulation data")
     } finally {
       setIsLoadingSimulation(false)
     }
@@ -118,7 +118,16 @@ export default function SimulationPage() {
       if (!response.ok) {
         const errorText = await response.text()
         console.error("Error response text:", errorText)
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
+
+        console.log("Response status:", response.status)
+
+        if (response.status === 402) {
+          throw new Error("Out of credits")
+        } else {
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText} out of credits`
+          )
+        }
       }
 
       const data = await response.json()
@@ -147,7 +156,7 @@ export default function SimulationPage() {
       })
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${response.status} (Out of credits)`)
       }
 
       const data = await response.json()
@@ -202,10 +211,6 @@ export default function SimulationPage() {
     }
   }
 
-  const handleGoBack = () => {
-    router.push("/simulation/summary")
-  }
-
   const handleConversationLeave = () => {
     setConversationUrl("")
     setStatus("Conversation ended")
@@ -213,7 +218,24 @@ export default function SimulationPage() {
   }
 
   const handleNext = () => {
-    router.push("/simulation/summary")
+    // Pass simulation data to summary page
+    const summaryUrl = simulation
+      ? `/simulation/summary?simId=${
+          simulation.sim_id
+        }&name=${encodeURIComponent(
+          simulation.name
+        )}&category=${encodeURIComponent(simulation.category)}`
+      : "/simulation/summary"
+    router.push(summaryUrl)
+  }
+
+  const handleRestart = () => {
+    // Restart the same simulation
+    if (simIdFromParams) {
+      router.push(`/simulation/sim?simId=${simIdFromParams}`)
+    } else {
+      router.push("/simulation/sim")
+    }
   }
 
   return (
@@ -226,27 +248,31 @@ export default function SimulationPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900">
-                    {simulation ? simulation.name : 'AI Conversation Simulation'}
+                    {simulation
+                      ? simulation.name
+                      : "AI Conversation Simulation"}
                   </h1>
                   <p className="text-gray-600 mt-1">
-                    {simulation ? simulation.description : 'Practice your communication skills with an AI replica'}
+                    {simulation
+                      ? simulation.description
+                      : "Practice your communication skills with an AI replica"}
                   </p>
                 </div>
-                {conversationUrl && (
+                {!conversationUrl && (
                   <Button
-                    onClick={handleGoBack}
+                    onClick={() => router.push("/dashboard/discover")}
                     variant="outline"
                     className="flex items-center gap-2"
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    Go Back
+                    Back to Discover
                   </Button>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-32">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
             {showControls && (
               <div className="text-center mb-8">
                 <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl mx-auto">
@@ -269,29 +295,52 @@ export default function SimulationPage() {
                         </svg>
                       </div>
                       <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                        Conversation Ended
+                        Simulation Completed!
+                      </h2>
+                      <p className="text-gray-600 leading-relaxed mb-4">
+                        Great job! Your{" "}
+                        {simulation?.name || "conversation simulation"} has been
+                        completed. You can now review your session and see your
+                        performance summary.
+                      </p>
+
+                      {/* Simulation Overview */}
+                      {simulation && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                          <h3 className="font-semibold text-blue-900 mb-2">
+                            Simulation Overview
+                          </h3>
+                          <div className="space-y-2 text-sm text-blue-800">
+                            <div>
+                              <strong>Scenario:</strong> {simulation.name}
+                            </div>
+                            <div>
+                              <strong>Category:</strong> {simulation.category}
+                            </div>
+                            <div>
+                              <strong>Description:</strong>{" "}
+                              {simulation.description}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : isLoadingSimulation ? (
+                    // Loading simulation state
+                    <div className="mb-6">
+                      <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                      <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                        Loading Simulation...
                       </h2>
                       <p className="text-gray-600 leading-relaxed">
-                        Great job! Your conversation simulation has been completed.
-                        You can now review your session and see your performance summary.
+                        Please wait while we load your simulation data.
                       </p>
                     </div>
-                                      ) : isLoadingSimulation ? (
-                      // Loading simulation state
-                      <div className="mb-6">
-                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                        <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                          Loading Simulation...
-                        </h2>
-                        <p className="text-gray-600 leading-relaxed">
-                          Please wait while we load your simulation data.
-                        </p>
-                      </div>
-                    ) : (
-                      // Initial state
-                      <div className="mb-6">
+                  ) : (
+                    // Initial state
+                    <div className="mb-6">
                       <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <svg
                           className="w-8 h-8 text-blue-600"
@@ -311,26 +360,50 @@ export default function SimulationPage() {
                         Ready to Start Your Conversation?
                       </h2>
                       <p className="text-gray-600 leading-relaxed">
-                        {simulation 
+                        {simulation
                           ? `Begin an interactive conversation with our AI replica for the "${simulation.name}" simulation. This scenario will help you practice your communication skills in a safe, controlled environment. The AI will respond naturally to your questions and engage in meaningful dialogue based on the ${simulation.category} scenario.`
-                          : `Begin an interactive conversation with our AI replica. This simulation will help you practice your communication skills in a safe, controlled environment. The AI will respond naturally to your questions and engage in meaningful dialogue.`
-                        }
+                          : `Begin an interactive conversation with our AI replica. This simulation will help you practice your communication skills in a safe, controlled environment. The AI will respond naturally to your questions and engage in meaningful dialogue.`}
                       </p>
                     </div>
                   )}
 
                   <div className="space-y-4">
                     {status === "Conversation ended" ? (
-                      <Button
-                        onClick={handleNext}
-                        size="lg"
-                        className="w-full sm:w-auto px-8 py-3 text-lg font-medium"
-                      >
-                        <div className="flex items-center gap-2">
-                          Next
-                          <ArrowRight className="w-5 h-5" />
-                        </div>
-                      </Button>
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <Button
+                          onClick={handleRestart}
+                          variant="outline"
+                          size="lg"
+                          className="px-8 py-3 text-lg font-medium"
+                        >
+                          <div className="flex items-center gap-2">
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                              />
+                            </svg>
+                            Restart Simulation
+                          </div>
+                        </Button>
+                        <Button
+                          onClick={handleNext}
+                          size="lg"
+                          className="px-8 py-3 text-lg font-medium"
+                        >
+                          <div className="flex items-center gap-2">
+                            View Summary
+                            <ArrowRight className="w-5 h-5" />
+                          </div>
+                        </Button>
+                      </div>
                     ) : (
                       <Button
                         onClick={handleStartConversation}
@@ -345,7 +418,9 @@ export default function SimulationPage() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            {simulation ? `Start ${simulation.name} Simulation` : 'Start Conversation'}
+                            {simulation
+                              ? `Start ${simulation.name} Simulation`
+                              : "Start Conversation"}
                             <ArrowRight className="w-5 h-5" />
                           </div>
                         )}
@@ -354,7 +429,7 @@ export default function SimulationPage() {
 
                     {status && status !== "Conversation ended" && (
                       <div
-                        className={`p-4 rounded-lg text-sm ${
+                        className={`p-4 rounded-lg text-sm mt-4 ${
                           status.includes("Error")
                             ? "bg-red-50 text-red-700 border border-red-200"
                             : "bg-blue-50 text-blue-700 border border-blue-200"
@@ -369,21 +444,11 @@ export default function SimulationPage() {
             )}
 
             {conversationUrl && (
-              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="p-4 bg-gray-50 border-b">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Live Conversation
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    You&apos;re now in an active conversation with the AI replica
-                  </p>
-                </div>
-                <div className="h-[700px]">
-                  <Conversation
-                    onLeave={handleConversationLeave}
-                    conversationUrl={conversationUrl}
-                  />
-                </div>
+              <div className="h-[600px] -mt-16 mb-24">
+                <Conversation
+                  onLeave={handleConversationLeave}
+                  conversationUrl={conversationUrl}
+                />
               </div>
             )}
           </div>
