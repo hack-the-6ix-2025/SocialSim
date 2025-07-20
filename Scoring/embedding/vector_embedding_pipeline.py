@@ -266,8 +266,23 @@ class VectorEmbeddingPipeline:
                 
                 try:
                     if len(vectors_to_store) >= 5:
-                        self.rag_storage.store(vectors_to_store)
-                        print(f"Stored batch of {len(vectors_to_store)} vectors")
+                        # Instead of storing to Pinecone, write vectors to a CSV file
+                        import csv
+                        output_csv = os.path.join(os.path.dirname(__file__), 'vectors_output.csv')
+
+                        # Write headers if the file does not exist
+                        if not os.path.exists(output_csv):
+                            with open(output_csv, mode='w', newline='', encoding='utf-8') as file:
+                                writer = csv.DictWriter(file, fieldnames=['id', 'values', 'metadata'])
+                                writer.writeheader()
+
+                        # Append vectors to the CSV file
+                        with open(output_csv, mode='a', newline='', encoding='utf-8') as file:
+                            writer = csv.DictWriter(file, fieldnames=['id', 'values', 'metadata'])
+                            for vector in vectors_to_store:
+                                writer.writerow(vector)
+
+                        print(f"Stored batch of {len(vectors_to_store)} vectors to CSV: {output_csv}")
                         vectors_to_store = []
 
                                     # Rate limiting

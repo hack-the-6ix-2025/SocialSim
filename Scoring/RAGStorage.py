@@ -44,6 +44,12 @@ class RAGStorage:
         index = self.ragProcessor.Index(self.index_name)
         valid_vectors = []
 
+        # Debugging: Log the index name and namespace
+        print(f"Using index: {self.index_name}, namespace: {self.namespace}")
+
+        # Debugging: Log the vectors before validation
+        print(f"Vectors received for storage: {vectors}")
+
         for vector in vectors:
             if not isinstance(vector, dict):
                 print(f"❌ Invalid vector format (not dict): {vector}")
@@ -60,6 +66,9 @@ class RAGStorage:
                 continue
 
             valid_vectors.append(vector)
+
+        # Debugging: Log valid vectors after validation
+        print(f"Valid vectors after validation: {valid_vectors}")
 
         if not valid_vectors:
             print("⚠️ No valid vectors to store.")
