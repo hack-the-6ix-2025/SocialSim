@@ -64,7 +64,8 @@ Empower professionals in high-stakes, people-oriented fields to build confidence
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Framer Motion
 - **Backend**: FastAPI, Python, Pydantic
 - **Database**: Supabase (PostgreSQL)
-- **AI**: Tavus API for video generation
+- **Video Generation**: Tavus API for video generation
+- **Scoring Model**: TwelveLabs summarizer and embedding, Gemini API, Google Cloud, SciKit 
 - **Authentication**: Supabase Auth with Google OAuth
 
 ## 🎯 Use Cases
