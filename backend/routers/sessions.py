@@ -3,7 +3,16 @@ from utils.supabase_client import supabase
 from typing import List, Literal
 from uuid import UUID
 from pydantic import BaseModel
-
+import sys
+import os
+sys.path.append(os.path.join(
+    os.path.dirname(os.path.__file__),
+    "..", # router
+    "..", # backend
+    "..", # root
+    "Scoring"
+))
+# from MockModel import MockModel
 
 router = APIRouter()
 
@@ -85,3 +94,45 @@ def filter_sessions_by_category(categories: list[str] = Query(...)):
         return sessions_resp.data or []
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+# AI feedback
+from fastapi import UploadFile, File, Form
+import tempfile
+
+class FeedbackRequest(BaseModel):
+    session_id: int
+
+# @router.put("/generate-feedback/")
+# async def generate_feedback(
+#     session_id: int = Form(...),
+#     video: UploadFile = File(...)
+# ):
+#     """
+#     Accepts a video file and session_id, processes the video, generates feedback, and stores it in the database.
+#     """
+#     try:
+#         # Save uploaded video to a temporary file
+#         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
+#             contents = await video.read()
+#             tmp.write(contents)
+#             tmp_path = tmp.name
+
+#         # TODO: Extract features/embeddings from video (placeholder)
+#         # For now, use dummy embedding
+#         embedding = ['dummy embedding']
+
+#         # Generate feedback using the model
+#         model = MockModel()
+#         feedback = model.predict(embedding)
+
+#         # Store feedback in the database (sessions table, add 'feedback' column if not present)
+#         update_resp = (
+#             supabase.table("sessions")
+#             .update({"feedback": feedback})
+#             .eq("session_id", session_id)
+#             .execute()
+#         )
+
+#         return {"session_id": session_id, "feedback": feedback, "db_response": update_resp.data}
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=str(e))

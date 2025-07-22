@@ -28,7 +28,7 @@ export interface OnboardingStep {
 	description: string
 	type: "single-select" | "multi-select"
 	options: OnboardingOption[]
-}
+}	
 
 export interface OnboardingData {
 	steps: OnboardingStep[]

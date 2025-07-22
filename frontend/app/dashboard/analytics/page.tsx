@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Search, TrendingUp, TrendingDown, Target, Clock, Award, BarChart3, Calendar, Filter } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { useSearchParams } from 'next/navigation'
 
 interface AnalyticsData {
   total_simulations: number
@@ -36,7 +35,6 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsPage() {
-  const searchParams = useSearchParams()
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null)
   const [recentPerformance, setRecentPerformance] = useState<any[]>([])
   const [categoryPerformance, setCategoryPerformance] = useState<any[]>([])
@@ -45,15 +43,6 @@ export default function AnalyticsPage() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [trendData, setTrendData] = useState<any[]>([])
-  const [selectedSimulation, setSelectedSimulation] = useState<string | null>(null)
-
-  // Handle URL parameters
-  useEffect(() => {
-    const simulationParam = searchParams.get('simulation')
-    if (simulationParam) {
-      setSelectedSimulation(simulationParam)
-    }
-  }, [searchParams])
 
   useEffect(() => {
     async function fetchAnalytics() {
@@ -185,72 +174,61 @@ export default function AnalyticsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Analytics</h1>
         <p className="text-muted-foreground">
-          {selectedSimulation 
-            ? `Viewing analytics for simulation: ${selectedSimulation}`
-            : 'View your stats, feedback, and analytics for your simulation history. Track your progress and identify areas for improvement.'
-          }
+          View your stats, feedback, and analytics for your simulation history. Track your progress and identify areas for improvement.
         </p>
-        {selectedSimulation && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-blue-800 text-sm">
-              <strong>Note:</strong> This page shows analytics for all simulations. For detailed simulation-specific analytics, 
-              the data would be filtered by the selected simulation ID: <code className="bg-blue-100 px-1 rounded">{selectedSimulation}</code>
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Filters and Search removed as requested */}
 
-      {/* Key Metrics */}
+      {/* Key Metrics with color accents */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className="border-l-4 border-blue-400 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Simulations</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-blue-800">Total Simulations</CardTitle>
+            <span className="bg-blue-100 p-2 rounded-full"><Target className="h-4 w-4 text-blue-500" /></span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyticsData?.total_simulations}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-blue-900">{analyticsData?.total_simulations}</div>
+            <p className="text-xs text-blue-600">
               +{analyticsData?.improvement_rate}% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500">
+        <Card className="border-l-4 border-green-400 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-green-800">Average Score</CardTitle>
+            <span className="bg-green-100 p-2 rounded-full"><TrendingUp className="h-4 w-4 text-green-500" /></span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyticsData?.average_score}%</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-green-900">{analyticsData?.average_score}%</div>
+            <p className="text-xs text-green-600">
               +2.3% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-indigo-500">
+        <Card className="border-l-4 border-purple-400 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-purple-800">Completion Rate</CardTitle>
+            <span className="bg-purple-100 p-2 rounded-full"><Award className="h-4 w-4 text-purple-500" /></span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{analyticsData?.completion_rate}%</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-purple-900">{analyticsData?.completion_rate}%</div>
+            <p className="text-xs text-purple-600">
               +1.2% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-cyan-500">
+        <Card className="border-l-4 border-pink-400 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Time Spent</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-pink-800">Time Spent</CardTitle>
+            <span className="bg-pink-100 p-2 rounded-full"><Clock className="h-4 w-4 text-pink-500" /></span>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatTime(analyticsData?.time_spent || 0)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-pink-900">{formatTime(analyticsData?.time_spent || 0)}</div>
+            <p className="text-xs text-pink-600">
               +15% from last month
             </p>
           </CardContent>
@@ -260,7 +238,7 @@ export default function AnalyticsPage() {
       {/* Charts and Detailed Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Performance Chart (now uses backend data) */}
-        <Card className="border-l-4 border-l-blue-500">
+        <Card>
           <CardHeader>
             <CardTitle>Performance Trend</CardTitle>
             <CardDescription>Your score progression over time</CardDescription>
@@ -287,7 +265,7 @@ export default function AnalyticsPage() {
         </Card>
 
         {/* Category Performance (now uses backend data) */}
-        <Card className="border-l-4 border-l-purple-500">
+        <Card>
           <CardHeader>
             <CardTitle>Category Performance</CardTitle>
             <CardDescription>Your scores by simulation category</CardDescription>
@@ -296,29 +274,14 @@ export default function AnalyticsPage() {
             {categoryPerformance.map((category, index) => (
               <div key={index} className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <Badge 
-                    variant="outline" 
-                    className={`${
-                      category.category.toLowerCase() === 'medical' 
-                        ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
-                        : category.category.toLowerCase() === 'disaster response'
-                        ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
-                        : category.category.toLowerCase() === 'leadership'
-                        ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
-                        : category.category.toLowerCase() === 'communication'
-                        ? 'border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100'
-                        : category.category.toLowerCase() === 'problem-solving'
-                        ? 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100'
-                        : category.category.toLowerCase() === 'team-management'
-                        ? 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
-                        : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    {category.category}
-                  </Badge>
+                  <span className="text-sm font-medium">
+                    <Badge variant={index === 0 ? 'default' : index === 1 ? 'secondary' : 'outline'} className={index === 0 ? 'bg-blue-500 text-white' : index === 1 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-800'}>
+                      {category.category}
+                    </Badge>
+                  </span>
                   <span className="text-sm text-muted-foreground">{category.score.toFixed(1)}%</span>
                 </div>
-                <Progress value={category.score} className="h-2" />
+                <Progress value={category.score} className={index === 0 ? 'h-2 bg-blue-200' : index === 1 ? 'h-2 bg-green-200' : 'h-2 bg-gray-100'} />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{category.count} simulations</span>
                   <span>Avg: {category.score.toFixed(1)}%</span>
@@ -335,7 +298,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Recent Performance Table (now uses backend data) */}
-      <Card className="border-l-4 border-l-indigo-500">
+      <Card>
         <CardHeader>
           <CardTitle>Recent Performance</CardTitle>
           <CardDescription>Your latest simulation results</CardDescription>
@@ -343,17 +306,18 @@ export default function AnalyticsPage() {
         <CardContent>
           <div className="space-y-4">
             {recentPerformance.map((performance, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+              <div key={index} className="flex items-center justify-between p-4 border rounded-lg border-l-4 "
+                style={{ borderLeftColor: performance.score >= 80 ? '#2563eb' : performance.score >= 60 ? '#22c55e' : '#ef4444' }}>
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium">{performance.score}</span>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${performance.score >= 80 ? 'bg-blue-100' : performance.score >= 60 ? 'bg-green-100' : 'bg-red-100'}`}>
+                    <span className={`text-sm font-medium ${performance.score >= 80 ? 'text-blue-700' : performance.score >= 60 ? 'text-green-700' : 'text-red-700'}`}>{performance.score}</span>
                   </div>
                   <div>
                     <p className="font-medium">{performance.simulation_name}</p>
                     <p className="text-sm text-muted-foreground">{formatDate(performance.completed_at)}</p>
                   </div>
                 </div>
-                <Badge variant={performance.score >= 80 ? "default" : performance.score >= 60 ? "secondary" : "destructive"}>
+                <Badge variant={performance.score >= 80 ? "default" : performance.score >= 60 ? "secondary" : "destructive"} className={performance.score >= 80 ? 'bg-blue-500 text-white' : performance.score >= 60 ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}>
                   {performance.score >= 80 ? "Excellent" : performance.score >= 60 ? "Good" : "Needs Improvement"}
                 </Badge>
               </div>
