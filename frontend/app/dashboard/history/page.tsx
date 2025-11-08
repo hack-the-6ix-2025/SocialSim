@@ -4,43 +4,85 @@ import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Download, Eye, RefreshCw, Search } from 'lucide-react'
+import { Download, Eye, RefreshCw, Search, Calendar, Clock, BarChart3 } from 'lucide-react'
+import { createClient } from '@/utils/supabase/client'
+import Link from 'next/link'
 
-
-interface Session {
-  session_id: string
-  associated_simulation: string
-  category: string
-  score: number
-  actual_duration: number
+interface HistoryEntry {
+  id: string
+  user_id: string
+  simulation_id: string
   created_at: string
-  completion_status: string
+  simulations: {
+    sim_id: string
+    name: string
+    description: string
+    thumbnail_url: string
+    category: string
+  }
 }
 
 export default function HistoryPage() {
-  const [sessions, setSessions] = useState<Session[]>([])
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [timeRange, setTimeRange] = useState('30d')
   const [categoryFilter, setCategoryFilter] = useState('all')
 
   useEffect(() => {
-    async function fetchSessions() {
+    async function fetchHistory() {
       try {
-        const res = await fetch('http://127.0.0.1:8000/sessions/all/history/')
-        if (!res.ok) throw new Error('Failed to fetch session history')
-        const data = await res.json()
-        setSessions(data)
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          setHistoryEntries([])
+          return
+        }
+
+        // Fetch history entries with simulation details using Supabase join
+        const { data, error } = await supabase
+          .from('history')
+          .select(`
+            id,
+            user_id,
+            simulation_id,
+            created_at,
+            simulations (
+              sim_id,
+              name,
+              description,
+              thumbnail_url,
+              category
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching history:', error)
+          setHistoryEntries([])
+        } else {
+          // Transform the data to match the expected interface
+          const transformedData = (data || []).map((entry: any) => ({
+            id: entry.id,
+            user_id: entry.user_id,
+            simulation_id: entry.simulation_id,
+            created_at: entry.created_at,
+            simulations: Array.isArray(entry.simulations) ? entry.simulations[0] : entry.simulations
+          }))
+          setHistoryEntries(transformedData)
+        }
       } catch (err) {
-        setSessions([])
+        console.error('Error fetching history:', err)
+        setHistoryEntries([])
       } finally {
         setLoading(false)
       }
     }
-    fetchSessions()
+    fetchHistory()
   }, [])
 
   const formatDate = (dateString: string) => {
@@ -53,37 +95,56 @@ export default function HistoryPage() {
     })
   }
 
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+  const getRelativeTime = (dateString: string) => {
+    const now = new Date()
+    const created = new Date(dateString)
+    const diffInHours = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60))
+    
+    if (diffInHours < 1) return 'Just now'
+    if (diffInHours < 24) return `${diffInHours}h ago`
+    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`
+    if (diffInHours < 720) return `${Math.floor(diffInHours / 168)}w ago`
+    return `${Math.floor(diffInHours / 720)}mo ago`
   }
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-yellow-600'
-    return 'text-red-600'
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge variant="default">Completed</Badge>
-      case 'in_progress':
-        return <Badge variant="secondary">In Progress</Badge>
-      case 'abandoned':
-        return <Badge variant="destructive">Abandoned</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
+  const filteredHistory = historyEntries.filter((item) => {
+    // Search filter
+    const matchesSearch =
+      searchQuery.trim() === '' ||
+      item.simulations.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.simulations.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.simulations.category.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    // Category filter
+    const matchesCategory =
+      categoryFilter === 'all' ||
+      item.simulations.category.toLowerCase() === categoryFilter.toLowerCase()
+    
+    // Time range filter
+    let matchesTime = true
+    if (timeRange !== 'all') {
+      const now = new Date()
+      const created = new Date(item.created_at)
+      let days = 0
+      if (timeRange === '7d') days = 7
+      else if (timeRange === '30d') days = 30
+      else if (timeRange === '90d') days = 90
+      else if (timeRange === '1y') days = 365
+      if (days > 0) {
+        const diff = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
+        matchesTime = diff <= days
+      }
     }
-  }
+    
+    return matchesSearch && matchesCategory && matchesTime
+  })
 
   return (
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Simulation History</h1>
         <p className="text-muted-foreground">
-          See your past simulations, scores, and detailed analytics. Review your performance and track your learning progress over time.
+          See your past simulations and track your learning progress over time.
         </p>
       </div>
 
@@ -129,115 +190,85 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Simulation History</CardTitle>
-              <CardDescription>
-                {sessions.length} simulation{sessions.length !== 1 ? 's' : ''} found
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-              <Button variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Simulation</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Completed</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sessions
-                .filter((item) => {
-                  // Search filter
-                  const matchesSearch =
-                    searchQuery.trim() === '' ||
-                    item.associated_simulation.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    item.category.toLowerCase().includes(searchQuery.toLowerCase())
-                  // Category filter
-                  const matchesCategory =
-                    categoryFilter === 'all' ||
-                    item.category.toLowerCase() === categoryFilter.toLowerCase()
-                  // Time range filter (only for created_at)
-                  let matchesTime = true
-                  if (timeRange !== 'all') {
-                    const now = new Date()
-                    const created = new Date(item.created_at)
-                    let days = 0
-                    if (timeRange === '7d') days = 7
-                    else if (timeRange === '30d') days = 30
-                    else if (timeRange === '90d') days = 90
-                    else if (timeRange === '1y') days = 365
-                    if (days > 0) {
-                      const diff = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
-                      matchesTime = diff <= days
+      {/* History Cards with color accents */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredHistory.map((entry, idx) => (
+          <Card key={entry.id} className="hover:shadow-lg transition-shadow border-l-4" style={{ borderLeftColor: '#6366f1' }}>
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-lg line-clamp-2 text-blue-900">
+                    {entry.simulations.name}
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    {entry.simulations.description.length > 100 
+                      ? `${entry.simulations.description.substring(0, 100)}...`
+                      : entry.simulations.description
                     }
-                  }
-                  return matchesSearch && matchesCategory && matchesTime
-                })
-                .map((item) => (
-                  <TableRow key={item.session_id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{item.associated_simulation}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{item.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`font-medium ${getScoreColor(item.score)}`}>
-                        {item.score}%
-                      </span>
-                    </TableCell>
-                    <TableCell>{formatDuration(item.actual_duration)}</TableCell>
-                    <TableCell>{formatDate(item.created_at)}</TableCell>
-                    <TableCell>{getStatusBadge(item.completion_status)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-            </TableBody>
-          </Table>
-          {sessions.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">
-                No simulation history available yet.
-              </p>
-            </div>
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Badge variant={idx % 3 === 0 ? 'default' : idx % 3 === 1 ? 'secondary' : 'outline'} className={idx % 3 === 0 ? 'bg-blue-500 text-white' : idx % 3 === 1 ? 'bg-green-500 text-white' : 'bg-purple-200 text-purple-800'}>
+                  {entry.simulations.category}
+                </Badge>
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4 mr-1 text-blue-500" />
+                  {getRelativeTime(entry.created_at)}
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center text-muted-foreground">
+                  <Clock className="w-4 h-4 mr-1 text-purple-500" />
+                  {formatDate(entry.created_at)}
+                </div>
+              </div>
+              
+              <div className="flex gap-2 pt-2">
+                <Button asChild variant="outline" size="sm" className="flex-1">
+                  <Link href={`/dashboard/analytics?simulation=${entry.simulation_id}`}>
+                    <BarChart3 className="w-4 h-4 mr-2 text-blue-500" />
+                    Analytics
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/dashboard/discover/${entry.simulation_id}`}>
+                    <Eye className="w-4 h-4 text-purple-500" />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredHistory.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">
+            {searchQuery || categoryFilter !== 'all' || timeRange !== 'all'
+              ? 'No simulations found matching your filters.'
+              : 'No simulation history available yet. Start by exploring simulations in the Discover section.'
+            }
+          </p>
+          {!searchQuery && categoryFilter === 'all' && timeRange === 'all' && (
+            <Button asChild className="mt-4">
+              <Link href="/dashboard/discover">
+                Discover Simulations
+              </Link>
+            </Button>
           )}
-          {loading && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Loading history...</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
+      
+      {loading && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading history...</p>
+        </div>
+      )}
     </div>
   )
 }
